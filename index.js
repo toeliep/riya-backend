@@ -1,7 +1,4 @@
-Perfect — I can see the full backend. Now I'll write the updated version with Supabase token validation. Close Notepad and run:
-notepad "C:\Users\Toelie\OneDrive\Desktop\Toelie DELL\riya-backend\index.js"
-Select all (Ctrl+A), delete everything, then paste this complete replacement:
-javascriptconst express = require('express');
+const express = require('express');
 const https = require('https');
 const app = express();
 app.use(express.json());
@@ -16,9 +13,8 @@ app.use((req, res, next) => {
 
 const SYSTEM_ROA = "You are Riya, an expert South African FAIS compliance assistant. You produce professional, FAIS-compliant Records of Advice for South African short-term insurance brokers under the FAIS Act 37 of 2002, Board Notice 80 of 2003, and General Notice 706 of 2020.\nProduce a complete, professional RoA covering ALL of the following sections:\n1. FSP and Representative Details\n2. Client Identification and KYC/FICA/POPIA confirmation\n3. Needs Analysis - detailed risk profile and identified needs per asset category\n4. Market Comparison - all three insurers compared with reasons for recommendation\n5. Product Recommended - full Section 9(1) statutory detail including exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest declaration\n7. Replacement Advice (if applicable)\n8. Client Acceptance Record\nBe thorough and substantive. Use clear numbered headings. Write in professional English suitable for FSCA inspection. Do not cite case law. Do NOT use markdown tables - use labeled paragraphs and bullet points instead.";
 
-const SYSTEM_EXTRACT = "You are a South African FAIS insurance compliance assistant. Extract all available insurance and client details from the provided text. Return ONLY valid raw JSON - no preamble, no markdown, no backticks - with these exact keys: brokerName, fspNumber, advisorName, fspAddress, complianceOfficer, clientCommsMethod, clientName, clientContact, clientReg, clientEmail, clientAddress, businessNature, businessTurnover, fleetSize, fleetValue, fleetTypes, fleetTracking, gitRequired, gitLimit, gitGoods, insuranceClass, insurer, premium, sumInsured, coverBasis, exclusions, excessStructure, commission, cmp1Insurer, cmp1Premium, cmp1Excess, cmp1NotRec, cmpRecInsurer, cmpRecPremium, cmpRecExcess, cmpRecReason, cmp3Insurer, cmp3Premium, cmp3Excess, cmp3NotRec, replacement, replacementDetails, replacementReason, additionalFacts, conflictOfInterest, claimsNotes. Use empty string for any field not found. replacement must be YES or NO.";
-
-function callClaude(apiKey, system, user, maxTokens) {
+const SYSTEM_EXTRACT = "You are a South African FAIS insurance compliance assistant. Extract all available insurance and client details from the provided text. Return ONLY valid raw JSON - no preamble, no markdown, no backticks - with these exact keys: brokerName, fspNumber, advisorName, fspAddress, complianceOfficer, clientCommsMethod, clientName, clientContact, clientReg, clientEmail, clientAddress, businessNature, businessTurnover, fleetSize, fleetValue, fleetTypes, fleetTracking, gitRequired, gitLimit, gitGoods, insuranceClass, insurer, premium, sumInsured, coverBasis, exclusions, excessStructure, commission, cmp1Insurer, cmp1Premium, cmp1Excess, cmp1NotRec, cmpRecInsurer, cmpRecPremium, cmpRecExcess, cmpRecReason, cmp3Insurer, cmp3Premium, cmp3Excess, cmp3NotRec, replacement, replacementDetails, replacementReason, additionalFacts, conflictOfInterest, claimsNotes. Use empty string for any field not found. replacement must be YES or NO.";Paste Part 2 directly after Part 1 (no gap needed):
+javascriptfunction callClaude(apiKey, system, user, maxTokens) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
@@ -89,28 +85,15 @@ async function validateBrokerToken(token) {
   return result[0];
 }
 
-async function deductCredit(token, roaType) {
+async function deductCredit(token, roaType, broker) {
   await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
-    credits: undefined,
-    credits_used: undefined,
+    credits: broker.credits - 1,
+    credits_used: broker.credits_used + 1,
     last_used: new Date().toISOString()
   });
-  await supabaseRequest('POST', 'brokers?token=eq.' + encodeURIComponent(token), null);
-  
-  // Use RPC to safely decrement
-  const broker = await validateBrokerToken(token);
-  if (broker) {
-    await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
-      credits: broker.credits - 1,
-      credits_used: broker.credits_used + 1,
-      last_used: new Date().toISOString()
-    });
-  }
-
-  // Log usage
   await supabaseRequest('POST', 'usage_log', {
     token: token,
-    broker_name: broker ? broker.name : 'unknown',
+    broker_name: broker.name,
     roa_type: roaType || 'unknown'
   });
 }
@@ -122,7 +105,6 @@ app.post('/generate-roa', async (req, res) => {
 
   if (!token) return res.status(401).json({ error: 'No token provided.' });
 
-  // Master token bypasses Supabase (for demo and internal use)
   let broker = null;
   if (token !== masterToken) {
     broker = await validateBrokerToken(token);
@@ -148,10 +130,9 @@ app.post('/generate-roa', async (req, res) => {
 
     const combined = (part1 + '\n\n---\n\n' + part2).trim();
 
-    // Deduct credit for broker tokens (not master token)
     if (broker) {
       const roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
-      await deductCredit(token, roaType);
+      await deductCredit(token, roaType, broker);
     }
 
     return res.json({ content: [{ type: 'text', text: combined }] });
