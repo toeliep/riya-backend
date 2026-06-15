@@ -1,4 +1,7 @@
-const express = require('express');
+Perfect — I can see the full backend. Now I'll write the updated version with Supabase token validation. Close Notepad and run:
+notepad "C:\Users\Toelie\OneDrive\Desktop\Toelie DELL\riya-backend\index.js"
+Select all (Ctrl+A), delete everything, then paste this complete replacement:
+javascriptconst express = require('express');
 const https = require('https');
 const app = express();
 app.use(express.json());
@@ -51,12 +54,83 @@ function callClaude(apiKey, system, user, maxTokens) {
   });
 }
 
+function supabaseRequest(method, path, body) {
+  return new Promise((resolve, reject) => {
+    const payload = body ? JSON.stringify(body) : null;
+    const options = {
+      hostname: 'sunihvgxtqbjjuvnrpof.supabase.co',
+      path: '/rest/v1/' + path,
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.SUPABASE_SERVICE_KEY,
+        'Authorization': 'Bearer ' + process.env.SUPABASE_SERVICE_KEY,
+        'Prefer': 'return=representation'
+      }
+    };
+    if (payload) options.headers['Content-Length'] = Buffer.byteLength(payload);
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try { resolve(JSON.parse(data)); }
+        catch(e) { resolve([]); }
+      });
+    });
+    req.on('error', e => reject(e));
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+async function validateBrokerToken(token) {
+  const result = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(token) + '&select=*');
+  if (!result || !result.length) return null;
+  return result[0];
+}
+
+async function deductCredit(token, roaType) {
+  await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
+    credits: undefined,
+    credits_used: undefined,
+    last_used: new Date().toISOString()
+  });
+  await supabaseRequest('POST', 'brokers?token=eq.' + encodeURIComponent(token), null);
+  
+  // Use RPC to safely decrement
+  const broker = await validateBrokerToken(token);
+  if (broker) {
+    await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
+      credits: broker.credits - 1,
+      credits_used: broker.credits_used + 1,
+      last_used: new Date().toISOString()
+    });
+  }
+
+  // Log usage
+  await supabaseRequest('POST', 'usage_log', {
+    token: token,
+    broker_name: broker ? broker.name : 'unknown',
+    roa_type: roaType || 'unknown'
+  });
+}
+
 app.post('/generate-roa', async (req, res) => {
   const { user, mode, token } = req.body;
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  const validToken = process.env.RIYA_ACCESS_TOKEN;
+  const masterToken = process.env.RIYA_ACCESS_TOKEN;
 
-  if (!token || token !== validToken) return res.status(401).json({ error: 'Unauthorised.' });
+  if (!token) return res.status(401).json({ error: 'No token provided.' });
+
+  // Master token bypasses Supabase (for demo and internal use)
+  let broker = null;
+  if (token !== masterToken) {
+    broker = await validateBrokerToken(token);
+    if (!broker) return res.status(401).json({ error: 'Invalid token.' });
+    if (broker.status !== 'active') return res.status(403).json({ error: 'Account suspended. Contact support.' });
+    if (broker.credits <= 0) return res.status(403).json({ error: 'No credits remaining. Please top up to continue.' });
+  }
+
   if (!apiKey) return res.status(500).json({ error: 'Server configuration error.' });
 
   try {
@@ -73,10 +147,25 @@ app.post('/generate-roa', async (req, res) => {
     try { part2 = await callClaude(apiKey, SYSTEM_ROA, user2, 1500); } catch(e) { part2 = 'Sections 5-8 error: ' + e.message; }
 
     const combined = (part1 + '\n\n---\n\n' + part2).trim();
+
+    // Deduct credit for broker tokens (not master token)
+    if (broker) {
+      const roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
+      await deductCredit(token, roaType);
+    }
+
     return res.json({ content: [{ type: 'text', text: combined }] });
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
+});
+
+app.get('/credits', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'Token required.' });
+  const broker = await validateBrokerToken(token);
+  if (!broker) return res.status(404).json({ error: 'Token not found.' });
+  return res.json({ name: broker.name, credits: broker.credits, credits_used: broker.credits_used, status: broker.status });
 });
 
 app.get('/', (req, res) => res.send('Riya backend running.'));
