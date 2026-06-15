@@ -13,8 +13,9 @@ app.use((req, res, next) => {
 
 const SYSTEM_ROA = "You are Riya, an expert South African FAIS compliance assistant. You produce professional, FAIS-compliant Records of Advice for South African short-term insurance brokers under the FAIS Act 37 of 2002, Board Notice 80 of 2003, and General Notice 706 of 2020.\nProduce a complete, professional RoA covering ALL of the following sections:\n1. FSP and Representative Details\n2. Client Identification and KYC/FICA/POPIA confirmation\n3. Needs Analysis - detailed risk profile and identified needs per asset category\n4. Market Comparison - all three insurers compared with reasons for recommendation\n5. Product Recommended - full Section 9(1) statutory detail including exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest declaration\n7. Replacement Advice (if applicable)\n8. Client Acceptance Record\nBe thorough and substantive. Use clear numbered headings. Write in professional English suitable for FSCA inspection. Do not cite case law. Do NOT use markdown tables - use labeled paragraphs and bullet points instead.";
 
-const SYSTEM_EXTRACT = "You are a South African FAIS insurance compliance assistant. Extract all available insurance and client details from the provided text. Return ONLY valid raw JSON - no preamble, no markdown, no backticks - with these exact keys: brokerName, fspNumber, advisorName, fspAddress, complianceOfficer, clientCommsMethod, clientName, clientContact, clientReg, clientEmail, clientAddress, businessNature, businessTurnover, fleetSize, fleetValue, fleetTypes, fleetTracking, gitRequired, gitLimit, gitGoods, insuranceClass, insurer, premium, sumInsured, coverBasis, exclusions, excessStructure, commission, cmp1Insurer, cmp1Premium, cmp1Excess, cmp1NotRec, cmpRecInsurer, cmpRecPremium, cmpRecExcess, cmpRecReason, cmp3Insurer, cmp3Premium, cmp3Excess, cmp3NotRec, replacement, replacementDetails, replacementReason, additionalFacts, conflictOfInterest, claimsNotes. Use empty string for any field not found. replacement must be YES or NO.";Paste Part 2 directly after Part 1 (no gap needed):
-javascriptfunction callClaude(apiKey, system, user, maxTokens) {
+const SYSTEM_EXTRACT = "You are a South African FAIS insurance compliance assistant. Extract all available insurance and client details from the provided text. Return ONLY valid raw JSON - no preamble, no markdown, no backticks - with these exact keys: brokerName, fspNumber, advisorName, fspAddress, complianceOfficer, clientCommsMethod, clientName, clientContact, clientReg, clientEmail, clientAddress, businessNature, businessTurnover, fleetSize, fleetValue, fleetTypes, fleetTracking, gitRequired, gitLimit, gitGoods, insuranceClass, insurer, premium, sumInsured, coverBasis, exclusions, excessStructure, commission, cmp1Insurer, cmp1Premium, cmp1Excess, cmp1NotRec, cmpRecInsurer, cmpRecPremium, cmpRecExcess, cmpRecReason, cmp3Insurer, cmp3Premium, cmp3Excess, cmp3NotRec, replacement, replacementDetails, replacementReason, additionalFacts, conflictOfInterest, claimsNotes. Use empty string for any field not found. replacement must be YES or NO.";
+
+function callClaude(apiKey, system, user, maxTokens) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
       model: 'claude-haiku-4-5-20251001',
@@ -49,6 +50,7 @@ javascriptfunction callClaude(apiKey, system, user, maxTokens) {
     req.end();
   });
 }
+
 
 function supabaseRequest(method, path, body) {
   return new Promise((resolve, reject) => {
@@ -121,12 +123,12 @@ app.post('/generate-roa', async (req, res) => {
       return res.json({ content: [{ type: 'text', text: result }] });
     }
 
-    const user1 = user + '\n\nGenerate sections 1-4 only. Be concise.\n1. FSP Details\n2. Client KYC/FICA/POPIA\n3. Needs Analysis\n4. Market Comparison';
-    const user2 = user + '\n\nGenerate sections 5-8 only. Be concise.\n5. Product Recommended\n6. Remuneration and COI\n7. Replacement Advice\n8. Client Acceptance';
+    const user1 = user + '\n\nGenerate sections 1-4 only.\n1. FSP Details\n2. Client KYC\n3. Needs Analysis\n4. Market Comparison';
+    const user2 = user + '\n\nGenerate sections 5-8 only.\n5. Product Recommended\n6. Remuneration\n7. Replacement\n8. Client Acceptance';
 
     let part1 = '', part2 = '';
-    try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 1500); } catch(e) { part1 = 'Sections 1-4 error: ' + e.message; }
-    try { part2 = await callClaude(apiKey, SYSTEM_ROA, user2, 1500); } catch(e) { part2 = 'Sections 5-8 error: ' + e.message; }
+    try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 1500); } catch(e) { part1 = 'Error: ' + e.message; }
+    try { part2 = await callClaude(apiKey, SYSTEM_ROA, user2, 1500); } catch(e) { part2 = 'Error: ' + e.message; }
 
     const combined = (part1 + '\n\n---\n\n' + part2).trim();
 
