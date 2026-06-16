@@ -156,4 +156,67 @@ app.get('/credits', async (req, res) => {
 app.get('/', (req, res) => res.send('Riya backend running.'));
 
 const PORT = process.env.PORT || 3000;
+
+app.post('/create-payment', async (req, res) => {
+  const { token, bundle } = req.body;
+  if (!token) return res.status(400).json({ error: 'Token required.' });
+
+  const bundles = {
+    starter:  { credits: 50,  amount: '20.00',  name: 'Riya Starter — 50 RoAs' },
+    standard: { credits: 200, amount: '80.00',  name: 'Riya Standard — 200 RoAs' },
+    pro:      { credits: 500, amount: '200.00', name: 'Riya Pro — 500 RoAs' }
+  };
+
+  const selected = bundles[bundle];
+  if (!selected) return res.status(400).json({ error: 'Invalid bundle.' });
+
+  const merchantId = process.env.PAYFAST_MERCHANT_ID;
+  const merchantKey = process.env.PAYFAST_MERCHANT_KEY;
+
+  const paymentData = {
+    merchant_id: merchantId,
+    merchant_key: merchantKey,
+    return_url: 'https://riya-pilot.netlify.app?payment=success',
+    cancel_url: 'https://riya-pilot.netlify.app?payment=cancelled',
+    notify_url: 'https://riya-backend-production.up.railway.app/payfast-webhook',
+    item_name: selected.name,
+    amount: selected.amount,
+    custom_str1: token,
+    custom_int1: selected.credits.toString()
+  };
+
+  const params = Object.entries(paymentData)
+    .map(([k, v]) => k + '=' + encodeURIComponent(v).replace(/%20/g, '+'))
+    .join('&');
+
+  const payUrl = 'https://www.payfast.co.za/eng/process?' + params;
+  return res.json({ url: payUrl });
+});
+
+app.post('/payfast-webhook', async (req, res) => {
+  const { payment_status, custom_str1, custom_int1 } = req.body;
+
+  if (payment_status !== 'COMPLETE') return res.sendStatus(200);
+
+  const token = custom_str1;
+  const credits = parseInt(custom_int1 || '0');
+
+  if (!token || !credits) return res.sendStatus(200);
+
+  try {
+    const broker = await validateBrokerToken(token);
+    if (!broker) return res.sendStatus(200);
+
+    await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
+      credits: broker.credits + credits
+    });
+
+    console.log('Credits added: ' + credits + ' to ' + token);
+  } catch(e) {
+    console.error('Webhook error:', e.message);
+  }
+
+  return res.sendStatus(200);
+});
+
 app.listen(PORT, () => console.log('Riya backend listening on port ' + PORT));
