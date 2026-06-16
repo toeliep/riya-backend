@@ -123,8 +123,8 @@ app.post('/generate-roa', async (req, res) => {
       return res.json({ content: [{ type: 'text', text: result }] });
     }
 
-    const user1 = user + '\n\nGenerate sections 1-4 only.\n1. FSP Details\n2. Client KYC\n3. Needs Analysis\n4. Market Comparison';
-    const user2 = user + '\n\nGenerate sections 5-8 only.\n5. Product Recommended\n6. Remuneration\n7. Replacement\n8. Client Acceptance';
+    const user1 = user + '\n\nGenerate sections 1-4 only. Be concise — use tables and bullet points, not long paragraphs. Each section maximum 3-4 paragraphs';
+    const user2 = user + '\n\nGenerate sections 5-8 only. Be concise — use bullet points not long paragraphs. Complete ALL four sections within the token lim';
 
     let part1 = '', part2 = '';
     try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 4000); } catch(e) { part1 = 'Error: ' + e.message; }
