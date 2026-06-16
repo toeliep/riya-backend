@@ -136,7 +136,8 @@ app.post('/generate-roa', async (req, res) => {
 
     if (broker) {
       const roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
-      await deductCredit(token, roaType, broker);
+    const creditCost = roaType === 'commercial' ? 2 : 1;
+      await deductCredit(token, roaType, broker, creditCost);
     }
 
     return res.json({ content: [{ type: 'text', text: combined }] });
