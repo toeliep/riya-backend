@@ -123,14 +123,16 @@ app.post('/generate-roa', async (req, res) => {
       return res.json({ content: [{ type: 'text', text: result }] });
     }
 
-    const user1 = user + '\n\nGenerate ONLY sections 1 to 4. Stop after section 4. Do not generate section 5 or beyond. Be concise — bullet points only, no l';
-    const user2 = user + '\n\nGenerate ONLY sections 5 to 8. Do not repeat sections 1-4. Be concise — bullet points only.\n5. Product Recommended — sum insur';
+    const user1 = user + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. Be concise — bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. STOP HERE.';
+    const user2 = user + '\n\nGenerate ONLY sections 3 and 4. Do not generate any other sections. Be concise — bullet points only.\n3. Needs Analysis — one short paragraph per asset class (motor, buildings, contents, all-risk, liability)\n4. Market Comparison — three insurers compared: premium, excess, key inclusions, reason recommended or not. STOP HERE.';
+    const user3 = user + '\n\nGenerate ONLY sections 5 to 8. Be concise — bullet points only.\n5. Product Recommended — sum insured schedule, exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest\n7. Replacement Advice\n8. Client Acceptance Record. End with the Riya footer.';
 
-    let part1 = '', part2 = '';
-    try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 4000); } catch(e) { part1 = 'Error: ' + e.message; }
-    try { part2 = await callClaude(apiKey, SYSTEM_ROA, user2, 1500); } catch(e) { part2 = 'Error: ' + e.message; }
+    let part1 = '', part2 = '', part3 = '';
+    try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 2000); } catch(e) { part1 = 'Error: ' + e.message; }
+    try { part2 = await callClaude(apiKey, SYSTEM_ROA, user2, 2500); } catch(e) { part2 = 'Error: ' + e.message; }
+    try { part3 = await callClaude(apiKey, SYSTEM_ROA, user3, 2500); } catch(e) { part3 = 'Error: ' + e.message; }
 
-    const combined = (part1 + '\n\n---\n\n' + part2).trim();
+    const combined = (part1 + '\n\n---\n\n' + part2 + '\n\n---\n\n' + part3).trim();
 
     if (broker) {
       const roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
