@@ -130,7 +130,7 @@ app.post('/generate-roa', async (req, res) => {
     let part1 = '', part2 = '', part3 = '';
     try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 2000); } catch(e) { part1 = 'Error: ' + e.message; }
     try { part2 = await callClaude(apiKey, SYSTEM_ROA, user2, 2500); } catch(e) { part2 = 'Error: ' + e.message; }
-    try { part3 = await callClaude(apiKey, SYSTEM_ROA, user3, 2500); } catch(e) { part3 = 'Error: ' + e.message; }
+    try { part3 = await callClaude(apiKey, SYSTEM_ROA, user3, 4000); } catch(e) { part3 = 'Error: ' + e.message; }
 
     const combined = (part1 + '\n\n---\n\n' + part2 + '\n\n---\n\n' + part3).trim();
 
