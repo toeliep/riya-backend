@@ -127,7 +127,7 @@ app.post('/generate-roa', async (req, res) => {
     const user2 = user + '\n\nGenerate sections 5-8 only.\n5. Product Recommended\n6. Remuneration\n7. Replacement\n8. Client Acceptance';
 
     let part1 = '', part2 = '';
-    try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 1500); } catch(e) { part1 = 'Error: ' + e.message; }
+    try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 4000); } catch(e) { part1 = 'Error: ' + e.message; }
     try { part2 = await callClaude(apiKey, SYSTEM_ROA, user2, 1500); } catch(e) { part2 = 'Error: ' + e.message; }
 
     const combined = (part1 + '\n\n---\n\n' + part2).trim();
