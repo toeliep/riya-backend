@@ -163,9 +163,10 @@ app.post('/create-payment', async (req, res) => {
   if (!token) return res.status(400).json({ error: 'Token required.' });
 
   const bundles = {
-    starter:  { credits: 50,  amount: '20.00',  name: 'Riya Starter — 50 RoAs' },
-    standard: { credits: 200, amount: '80.00',  name: 'Riya Standard — 200 RoAs' },
-    pro:      { credits: 500, amount: '200.00', name: 'Riya Pro — 500 RoAs' }
+    starter:  { credits: 50,   amount: '20.00',  name: 'Riya Starter — 50 RoAs' },
+    standard: { credits: 200,  amount: '80.00',  name: 'Riya Standard — 200 RoAs' },
+    pro:      { credits: 500,  amount: '200.00', name: 'Riya Pro — 500 RoAs' },
+    catchup:  { credits: 1000, amount: '350.00', name: 'Riya Catch-Up — 1,000 RoAs' }
   };
 
   const selected = bundles[bundle];
