@@ -73,6 +73,7 @@ function supabaseRequest(method, path, body) {
       let data = '';
       res.on('data', chunk => data += chunk);
       res.on('end', () => {
+        console.log('SUPABASE RESPONSE [' + path + ']: status=' + res.statusCode + ' body=' + data);
         try { resolve(JSON.parse(data)); }
         catch(e) { resolve([]); }
       });
