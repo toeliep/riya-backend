@@ -165,6 +165,23 @@ app.get('/credits', async (req, res) => {
   return res.json({ name: broker.name, credits: broker.credits, credits_used: broker.credits_used, status: broker.status });
 });
 
+app.post('/record-acceptance', async (req, res) => {
+  const { roa_token, client_name, client_email, broker_token } = req.body;
+  if (!client_name || !client_email) return res.status(400).json({ error: 'Client name and email are required.' });
+  try {
+    await supabaseRequest('POST', 'acceptances', {
+      roa_token: roa_token || null,
+      client_name: client_name,
+      client_email: client_email,
+      broker_token: broker_token || null,
+      accepted_at: new Date().toISOString()
+    });
+    return res.json({ success: true, accepted_at: new Date().toISOString() });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/', (req, res) => res.send('Riya backend running.'));
 
 const PORT = process.env.PORT || 3000;
