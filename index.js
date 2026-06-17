@@ -174,8 +174,7 @@ app.post('/record-acceptance', async (req, res) => {
       roa_token: roa_token || null,
       client_name: client_name,
       client_email: client_email,
-      broker_token: broker_token || null,
-      accepted_at: new Date().toISOString()
+      broker_token: broker_token || null
     });
     return res.json({ success: true, accepted_at: new Date().toISOString() });
   } catch(e) {
