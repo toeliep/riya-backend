@@ -136,13 +136,22 @@ app.post('/generate-roa', async (req, res) => {
 
     const combined = (part1 + '\n\n---\n\n' + part2 + '\n\n---\n\n' + part3).trim();
 
+    let warnings = [];
+    try {
+      const verifyPrompt = 'BROKER INPUT:\n' + user + '\n\nGENERATED DOCUMENT:\n' + combined + '\n\nList ONLY specific facts in the GENERATED DOCUMENT that do NOT appear anywhere in the BROKER INPUT above - this includes invented insurer ratings, complaint counts, claims timeframes, specific sums insured not stated by the broker, fabricated conflict-of-interest scenarios, or any invented dates/numbers/names. Return ONLY a JSON array of short strings describing each issue. If nothing is fabricated, return exactly: []';
+      const verifyResult = await callClaude(apiKey, 'You are a strict fact-checker. Output ONLY a raw JSON array, nothing else.', verifyPrompt, 800);
+      const cleaned = verifyResult.trim().replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
+      warnings = JSON.parse(cleaned);
+      if (!Array.isArray(warnings)) warnings = [];
+    } catch(e) { warnings = []; }
+
     if (broker) {
       const roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
     const creditCost = roaType === 'commercial' ? 2 : 1;
       await deductCredit(token, roaType, broker, creditCost);
     }
 
-    return res.json({ content: [{ type: 'text', text: combined }] });
+    return res.json({ content: [{ type: 'text', text: combined }], warnings: warnings });
   } catch(e) {
     return res.status(500).json({ error: e.message });
   }
