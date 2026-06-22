@@ -140,13 +140,17 @@ app.post('/generate-roa', async (req, res) => {
       return res.json({ gaps: gaps });
     }
 
-    const user1 = user + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. Be concise — bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. STOP HERE.';
-    const user2 = user + '\n\nGenerate ONLY sections 3 and 4. Do not generate any other sections. Be concise — bullet points only.\n3. Needs Analysis — one short paragraph per asset class (motor, buildings, contents, all-risk, liability)\n4. Market Comparison — three insurers compared: premium, excess, key inclusions, reason recommended or not. STOP HERE.';
-    const user3 = user + '\n\nGenerate ONLY sections 5 to 8. Be concise — bullet points only.\n5. Product Recommended — sum insured schedule, exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest\n7. Replacement Advice\n8. Client Acceptance Record. End with the Riya footer.';
-
-    let part1 = '', part2 = '', part3 = '';
+    const user1 = user + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. Be concise - bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. STOP HERE.';
+    let part1 = '';
     try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 2000); } catch(e) { part1 = 'Error: ' + e.message; }
+
+    const user2 = user + '\n\n--- SECTIONS 1 AND 2 ALREADY GENERATED, FOR YOUR CONTEXT ONLY, DO NOT REPEAT ---\n' + part1 + '\n--- END OF CONTEXT ---\n\nGenerate ONLY sections 3 and 4. Do not generate any other sections. Be consistent with the FSP, client and trigger details already established above. Be concise - bullet points only.\n3. Needs Analysis - one short paragraph per asset class (motor, buildings, contents, all-risk, liability)\n4. Market Comparison - three insurers compared: premium, excess, key inclusions, reason recommended or not. Clearly state which ONE insurer is being recommended and which are not. STOP HERE.';
+    let part2 = '';
     try { part2 = await callClaude(apiKey, SYSTEM_ROA, user2, 2500); } catch(e) { part2 = 'Error: ' + e.message; }
+
+    const user3 = user + '\n\n--- SECTIONS 3 AND 4 ALREADY GENERATED, FOR YOUR CONTEXT ONLY, DO NOT REPEAT ---\n' + part2 + '\n--- END OF CONTEXT ---\n\nGenerate ONLY sections 5 to 8. CRITICAL: Section 5 (Product Recommended) MUST recommend the EXACT SAME insurer that was identified as recommended in the Market Comparison section above - do not introduce a different insurer or different premium figures. Be concise - bullet points only.\n5. Product Recommended - sum insured schedule, exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest\n7. Replacement Advice\n8. Client Acceptance Record. End with the Riya footer.';
+
+    let part3 = '';
     try { part3 = await callClaude(apiKey, SYSTEM_ROA, user3, 4000); } catch(e) { part3 = 'Error: ' + e.message; }
 
     const combined = (part1 + '\n\n---\n\n' + part2 + '\n\n---\n\n' + part3).trim();
