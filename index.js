@@ -166,7 +166,7 @@ app.post('/generate-roa', async (req, res) => {
 
     if (broker) {
       const roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
-    const creditCost = roaType === 'commercial' ? 2 : 1;
+    const creditCost = roaType === 'commercial' ? 3 : 2;
       await deductCredit(token, roaType, broker, creditCost);
     }
 
@@ -209,10 +209,10 @@ app.post('/create-payment', async (req, res) => {
   if (!token) return res.status(400).json({ error: 'Token required.' });
 
   const bundles = {
-    starter:  { credits: 50,   amount: '20.00',  name: 'Riya Starter — 50 RoAs' },
-    standard: { credits: 200,  amount: '80.00',  name: 'Riya Standard — 200 RoAs' },
-    pro:      { credits: 500,  amount: '200.00', name: 'Riya Pro — 500 RoAs' },
-    catchup:  { credits: 1000, amount: '350.00', name: 'Riya Catch-Up — 1,000 RoAs' }
+    starter:  { credits: 20,  amount: '100.00',  name: 'Riya Starter — 10 RoAs' },
+    standard: { credits: 80,  amount: '400.00',  name: 'Riya Standard — 40 RoAs' },
+    pro:      { credits: 200, amount: '1000.00', name: 'Riya Pro — 100 RoAs' },
+    catchup:  { credits: 500, amount: '2500.00', name: 'Riya Catch-Up — 250 RoAs' }
   };
 
   const selected = bundles[bundle];
