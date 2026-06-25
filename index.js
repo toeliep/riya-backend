@@ -1,5 +1,6 @@
 const express = require('express');
 const { sendWelcomeEmail } = require('./resend_helper');
+const PDFDocument = require('pdfkit');
 
 const https = require('https');
 const app = express();
@@ -173,6 +174,50 @@ app.post('/generate-roa', async (req, res) => {
     return res.json({ content: [{ type: 'text', text: combined }], warnings: warnings });
   } catch(e) {
     return res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/generate-pdf', async (req, res) => {
+  const { text, clientName, fspName, triggerLabel, adviceDate } = req.body;
+  if (!text) return res.status(400).json({ error: 'No text provided' });
+  try {
+    const doc = new PDFDocument({ margin: 50, size: 'A4', font: __dirname + '/notosans-regular.ttf' });
+    doc.registerFont('Regular', __dirname + '/notosans-regular.ttf');
+    doc.registerFont('Bold', __dirname + '/notosans-bold.ttf');
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="RoA.pdf"');
+      res.send(pdfBuffer);
+    });
+    doc.font('Bold').fontSize(18).fillColor('#1F4E5F').text('Record of Advice', { align: 'left' });
+    doc.moveDown(0.3);
+    doc.font('Regular').fontSize(10).fillColor('#595959')
+      .text((triggerLabel || 'Record of Advice') + '   |   ' + (fspName || 'FSP') + '   |   ' + (clientName || 'Client') + '   |   ' + (adviceDate || new Date().toLocaleDateString('en-ZA')));
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#CCCCCC').stroke();
+    doc.moveDown(0.8);
+    const lines = text.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) { doc.moveDown(0.4); continue; }
+      if (/^#{1,3}\s/.test(trimmed) || /^\d+\.\s+[A-Z]/.test(trimmed)) {
+        doc.moveDown(0.3);
+        doc.font('Bold').fontSize(12).fillColor('#1F4E5F').text(trimmed.replace(/^#{1,3}\s/, ''));
+        doc.moveDown(0.2);
+      } else if (trimmed.startsWith('---')) {
+        doc.moveDown(0.2);
+        doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#EEEEEE').stroke();
+        doc.moveDown(0.2);
+      } else {
+        doc.font('Regular').fontSize(10).fillColor('#1A1A1A').text(trimmed, { align: 'left' });
+      }
+    }
+    doc.end();
+  } catch(err) {
+    res.status(500).json({ error: err.message });
   }
 });
 
