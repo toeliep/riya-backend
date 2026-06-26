@@ -3,6 +3,45 @@ const { sendWelcomeEmail } = require('./resend_helper');
 const PDFDocument = require('pdfkit');
 
 const https = require('https');
+const multerUpload = require('multer')({
+  storage: require('multer').memoryStorage(),
+  limits: { fileSize: 25 * 1024 * 1024 }
+});
+
+function transcribeWithElevenLabs(fileBuffer, filename, mimetype) {
+  return new Promise((resolve, reject) => {
+    const apiKey = process.env.ELEVENLABS_API_KEY;
+    if (!apiKey) return reject(new Error('ELEVENLABS_API_KEY not configured on server'));
+    const boundary = '----RiyaVoiceBoundary' + Date.now();
+    const parts = [];
+    parts.push(Buffer.from('--' + boundary + '\r\nContent-Disposition: form-data; name="model_id"\r\n\r\nscribe_v2\r\n'));
+    parts.push(Buffer.from('--' + boundary + '\r\nContent-Disposition: form-data; name="file"; filename="' + filename + '"\r\nContent-Type: ' + (mimetype || 'application/octet-stream') + '\r\n\r\n'));
+    parts.push(fileBuffer);
+    parts.push(Buffer.from('\r\n--' + boundary + '--\r\n'));
+    const payload = Buffer.concat(parts);
+    const options = {
+      hostname: 'api.elevenlabs.io',
+      path: '/v1/speech-to-text',
+      method: 'POST',
+      headers: { 'xi-api-key': apiKey, 'Content-Type': 'multipart/form-data; boundary=' + boundary, 'Content-Length': payload.length }
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (res.statusCode !== 200) reject(new Error('ElevenLabs error (' + res.statusCode + '): ' + (parsed.detail || JSON.stringify(parsed)).substring(0, 300)));
+          else resolve(parsed.text || '');
+        } catch (e) { reject(new Error('ElevenLabs parse error: ' + e.message)); }
+      });
+    });
+    req.on('error', e => reject(new Error('Network: ' + e.message)));
+    req.write(payload);
+    req.end();
+  });
+}
+
 const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -177,6 +216,43 @@ app.post('/generate-roa', async (req, res) => {
   }
 });
 
+app.post('/transcribe-voice', multerUpload.single('audio'), async (req, res) => {
+  const token = req.body && req.body.token;
+  const masterToken = process.env.RIYA_ACCESS_TOKEN;
+
+  if (!token) return res.status(401).json({ error: 'No token provided.' });
+  if (!req.file) return res.status(400).json({ error: 'No audio file received.' });
+
+  if (token !== masterToken) {
+    const broker = await validateBrokerToken(token);
+    if (!broker) return res.status(401).json({ error: 'Invalid token.' });
+    if (broker.status !== 'active') return res.status(403).json({ error: 'Account suspended. Contact support.' });
+  }
+
+  const allowedExt = ['.m4a', '.mp3', '.wav', '.ogg', '.mp4', '.webm'];
+  const ext = '.' + (req.file.originalname.split('.').pop() || '').toLowerCase();
+  if (!allowedExt.includes(ext)) {
+    return res.status(400).json({ error: 'Unsupported audio format. Please upload .m4a, .mp3, .wav, or .ogg.' });
+  }
+
+  try {
+    const transcript = await transcribeWithElevenLabs(req.file.buffer, req.file.originalname, req.file.mimetype);
+
+    if (!transcript || !transcript.trim()) {
+      return res.status(422).json({ error: 'No speech detected in the audio file. Please check the recording and try again.' });
+    }
+
+    return res.json({ transcript: transcript });
+
+  } catch (e) {
+    console.error('Transcription error:', e.message);
+    if (e.message.indexOf('ElevenLabs error') > -1) {
+      return res.status(502).json({ error: 'Transcription service is currently unavailable. Please try again shortly, or paste your notes as text instead.' });
+    }
+    return res.status(500).json({ error: 'Transcription failed. Please try again.' });
+  }
+});
+
 app.post('/generate-pdf', async (req, res) => {
   const { text, clientName, fspName, triggerLabel, adviceDate } = req.body;
   if (!text) return res.status(400).json({ error: 'No text provided' });
@@ -254,10 +330,10 @@ app.post('/create-payment', async (req, res) => {
   if (!token) return res.status(400).json({ error: 'Token required.' });
 
   const bundles = {
-    starter:  { credits: 20,  amount: '100.00',  name: 'Riya Starter — 10 RoAs' },
-    standard: { credits: 80,  amount: '400.00',  name: 'Riya Standard — 40 RoAs' },
-    pro:      { credits: 200, amount: '1000.00', name: 'Riya Pro — 100 RoAs' },
-    catchup:  { credits: 500, amount: '2500.00', name: 'Riya Catch-Up — 250 RoAs' }
+    starter:  { credits: 20,  amount: '100.00',  name: 'Riya Starter \u2014 10 RoAs' },
+    standard: { credits: 80,  amount: '400.00',  name: 'Riya Standard \u2014 40 RoAs' },
+    pro:      { credits: 200, amount: '1000.00', name: 'Riya Pro \u2014 100 RoAs' },
+    catchup:  { credits: 500, amount: '2500.00', name: 'Riya Catch-Up \u2014 250 RoAs' }
   };
 
   const selected = bundles[bundle];
