@@ -302,7 +302,7 @@ app.get('/credits', async (req, res) => {
   if (!token) return res.status(400).json({ error: 'Token required.' });
   const broker = await validateBrokerToken(token);
   if (!broker) return res.status(404).json({ error: 'Token not found.' });
-  return res.json({ name: broker.name, credits: broker.credits, credits_used: broker.credits_used, status: broker.status });
+  return res.json({ name: broker.name, credits: broker.credits, credits_used: broker.credits_used, status: broker.status, fsp_firm_name: broker.fsp_firm_name || '', fsp_number: broker.fsp_number || '', fsp_address: broker.fsp_address || '', compliance_officer: broker.compliance_officer || '' });
 });
 
 app.post('/record-acceptance', async (req, res) => {
