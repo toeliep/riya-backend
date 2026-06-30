@@ -363,7 +363,7 @@ app.post('/create-payment', async (req, res) => {
 });
 
 app.post('/payfast-webhook', async (req, res) => {
-  const { payment_status, custom_str1, custom_int1 } = req.body;
+  const { payment_status, custom_str1, custom_int1, pf_payment_id } = req.body;
 
   if (payment_status !== 'COMPLETE') return res.sendStatus(200);
 
@@ -372,7 +372,19 @@ app.post('/payfast-webhook', async (req, res) => {
 
   if (!token || !credits) return res.sendStatus(200);
 
+  if (!pf_payment_id) {
+    console.error('Webhook missing pf_payment_id - cannot verify idempotency, skipping to avoid duplicate credit risk');
+    return res.sendStatus(200);
+  }
+
   try {
+    // Check if this exact payment has already been processed
+    const existing = await supabaseRequest('GET', 'processed_payments?pf_payment_id=eq.' + encodeURIComponent(pf_payment_id) + '&select=id');
+    if (existing && existing.length > 0) {
+      console.log('Payment ' + pf_payment_id + ' already processed - skipping duplicate webhook call');
+      return res.sendStatus(200);
+    }
+
     const broker = await validateBrokerToken(token);
     if (!broker) return res.sendStatus(200);
 
@@ -380,7 +392,13 @@ app.post('/payfast-webhook', async (req, res) => {
       credits: broker.credits + credits
     });
 
-    console.log('Credits added: ' + credits + ' to ' + token);
+    await supabaseRequest('POST', 'processed_payments', {
+      pf_payment_id: pf_payment_id,
+      broker_token: token,
+      credits_added: credits
+    });
+
+    console.log('Credits added: ' + credits + ' to ' + token + ' (payment ' + pf_payment_id + ')');
   } catch(e) {
     console.error('Webhook error:', e.message);
   }
