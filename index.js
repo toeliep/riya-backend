@@ -413,13 +413,34 @@ const { Paragraph, TextRun, AlignmentType } = require('docx');
 const path = require('path');
 app.post('/send-roa-to-broker', async (req, res) => {
   try {
-    const { roaContent, brokerEmail, clientName, brokerName } = req.body;
-    if (!roaContent || !brokerEmail || !clientName) {
+    const { roaContent, brokerToken, clientName, brokerName } = req.body;
+    if (!roaContent || !brokerToken || !clientName) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-    const result = await sendRoAEmail(brokerEmail, clientName, brokerName, roaContent);
+
+    // Look up broker email from Supabase using token
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(
+      process.env.SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_KEY
+    );
+
+    const { data: broker, error: brokerError } = await supabase
+      .from('brokers')
+      .select('email, name')
+      .eq('token', brokerToken)
+      .single();
+
+    if (brokerError || !broker) {
+      return res.status(400).json({ error: 'Invalid broker token' });
+    }
+
+    const brokerEmail = broker.email;
+    const resolvedBrokerName = brokerName || broker.name || 'Adviser';
+
+    const result = await sendRoAEmail(brokerEmail, clientName, resolvedBrokerName, roaContent);
     if (result.success) {
-      return res.status(200).json({ success: true });
+      return res.status(200).json({ success: true, sentTo: brokerEmail });
     } else {
       return res.status(500).json({ error: result.error });
     }
