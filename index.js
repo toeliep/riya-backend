@@ -1,5 +1,5 @@
 const express = require('express');
-const { sendWelcomeEmail } = require('./resend_helper');
+const { sendWelcomeEmail, sendRoAEmail } = require('./resend_helper');
 const PDFDocument = require('pdfkit');
 
 const https = require('https');
@@ -411,55 +411,21 @@ app.post('/create-token', async (req, res) => { const {name,email,token,fsp_numb
 const { Document, Packer } = require('docx');
 const { Paragraph, TextRun, AlignmentType } = require('docx');
 const path = require('path');
-
 app.post('/send-roa-to-broker', async (req, res) => {
   try {
     const { roaContent, brokerEmail, clientName, brokerName } = req.body;
-
     if (!roaContent || !brokerEmail || !clientName) {
       return res.status(400).json({ error: 'Missing required fields' });
     }
-
-    const wordDoc = new Document({
-      sections: [{
-        children: [
-          new Paragraph({
-            text: 'RECORD OF ADVICE',
-            heading: 'Heading1',
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 200 }
-          }),
-          new Paragraph({
-            text: `Client: ${clientName}`,
-            spacing: { after: 100 }
-          }),
-          new Paragraph({
-            text: roaContent,
-            spacing: { after: 100 }
-          })
-        ]
-      }]
-    });
-
-    const buffer = await Packer.toBuffer(wordDoc);
-    const base64Content = buffer.toString('base64');
-
-    const response = await resend.emails.send({
-      from: 'Riya <noreply@riya-pilot.com>',
-      to: brokerEmail,
-      subject: `Record of Advice — ${clientName}`,
-      html: `<p>Hi ${brokerName || 'Adviser'},</p><p>Please find attached your Record of Advice for <strong>${clientName}</strong>.</p><p>Review and edit as needed before sending to your client.</p>`,
-      attachments: [{
-        filename: `${clientName}_RoA.docx`,
-        content: base64Content
-      }]
-    });
-
-    return res.status(200).json({ success: true, emailId: response.id });
+    const result = await sendRoAEmail(brokerEmail, clientName, brokerName, roaContent);
+    if (result.success) {
+      return res.status(200).json({ success: true });
+    } else {
+      return res.status(500).json({ error: result.error });
+    }
   } catch (error) {
     console.error('Error:', error);
     return res.status(500).json({ error: error.message });
   }
 });
 
-app.listen(PORT, () => console.log('Riya backend listening on port ' + PORT));

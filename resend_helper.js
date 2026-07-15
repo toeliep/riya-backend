@@ -13,4 +13,53 @@ async function sendWelcomeEmail(n, e, t) {
     console.error('Email failed:', err.message);
   }
 }
-module.exports = { sendWelcomeEmail };
+async function sendRoAEmail(brokerEmail, clientName, brokerName, roaContent) {
+  const { Document, Packer, Paragraph, TextRun, AlignmentType } = require('docx');
+  try {
+    const wordDoc = new Document({
+      sections: [{
+        children: [
+          new Paragraph({
+            children: [new TextRun({ text: 'RECORD OF ADVICE', bold: true, size: 28 })],
+            alignment: AlignmentType.CENTER,
+            spacing: { after: 200 }
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: 'Client: ' + clientName, bold: true })],
+            spacing: { after: 100 }
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: 'Generated: ' + new Date().toLocaleDateString() })],
+            spacing: { after: 300 }
+          }),
+          new Paragraph({
+            children: [new TextRun({ text: roaContent })],
+            spacing: { after: 100 }
+          })
+        ]
+      }]
+    });
+
+    const buffer = await Packer.toBuffer(wordDoc);
+    const base64Content = buffer.toString('base64');
+
+    await resend.emails.send({
+      from: 'Riya <hello@riya.co.za>',
+      to: brokerEmail,
+      subject: 'Record of Advice — ' + clientName + ' ' + new Date().toLocaleDateString(),
+      html: '<p>Hi ' + (brokerName || 'Adviser') + ',</p><p>Please find attached your Record of Advice for <strong>' + clientName + '</strong>.</p><p>Review and edit as needed before sending to your client.</p><p>Regards,<br/>Riya</p>',
+      attachments: [{
+        filename: clientName.replace(/\s+/g,'_') + '_RoA.docx',
+        content: base64Content
+      }]
+    });
+
+    console.log('RoA email sent to:', brokerEmail);
+    return { success: true };
+  } catch(err) {
+    console.error('RoA email failed:', err.message);
+    return { success: false, error: err.message };
+  }
+}
+
+module.exports = { sendWelcomeEmail, sendRoAEmail };
