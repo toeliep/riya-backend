@@ -1,5 +1,9 @@
 const { Resend } = require('resend');
-const { Document, Packer, Paragraph, TextRun, AlignmentType } = require('docx');
+const { 
+  Document, Packer, Paragraph, TextRun, 
+  AlignmentType, BorderStyle,
+  ShadingType
+} = require('docx');
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -11,7 +15,7 @@ async function sendWelcomeEmail(n, e, t) {
       from: 'Riya <hello@riya.co.za>',
       to: e,
       subject: 'Welcome to Riya — Your Broker Token',
-      html: '<div style="margin:0;padding:40px 20px;background:#f4f4f4;font-family:Arial,sans-serif;"><div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;box-shadow:0 1px 3px rgba(0,0,0,0.1);"><div style="background:#1F4E5F;padding:28px 32px;"><div style="color:#D4AF37;font-size:26px;font-weight:bold;letter-spacing:1px;">RIYA</div><div style="color:#ffffff;font-size:13px;font-style:italic;margin-top:4px;opacity:0.9;">An RoA that checks its own homework.</div></div><div style="padding:32px;"><p style="font-size:15px;color:#1A1A1A;line-height:1.6;margin-top:0;">Dear ' + n + '</p><p style="font-size:15px;color:#1A1A1A;line-height:1.6;">Welcome to Riya. You are now set up with <strong>5 free Records of Advice</strong> to try it for yourself.</p><div style="background:#F7F5EF;border:1px solid #E0DCC8;border-radius:6px;padding:18px 20px;margin:24px 0;text-align:center;"><div style="font-size:11px;color:#595959;text-transform:uppercase;letter-spacing:1px;margin-bottom:6px;">Your Broker Token</div><div style="font-size:22px;font-weight:bold;color:#1F4E5F;font-family:Courier New,monospace;">' + t + '</div></div><div style="text-align:center;margin:28px 0;"><a href="https://riya-pilot.netlify.app" style="background:#1F4E5F;color:#ffffff;text-decoration:none;padding:13px 32px;border-radius:4px;font-size:14px;font-weight:bold;display:inline-block;">Open Riya and Enter Your Token</a></div><p style="font-size:13px;color:#595959;line-height:1.6;">After your free credits: R10 for personal lines, R15 for commercial, per RoA, no subscription.</p><hr style="border:none;border-top:1px solid #E5E5E5;margin:28px 0;"><p style="font-size:14px;color:#1A1A1A;line-height:1.6;">Toelie Pienaar<br><a href="tel:0833258672" style="color:#1F4E5F;text-decoration:none;">083 325 8672</a></p></div><div style="background:#FAFAFA;padding:16px 32px;border-top:1px solid #EEEEEE;"><div style="font-size:11px;color:#999999;">Africa Bloom (Pty) Ltd</div></div></div></div>'
+      html: '<div style="margin:0;padding:40px 20px;background:#f4f4f4;font-family:Arial,sans-serif;"><div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;background:#ffffff;border-radius:8px;overflow:hidden;"><div style="background:#1F4E5F;padding:28px 32px;"><div style="color:#D4AF37;font-size:26px;font-weight:bold;">RIYA</div></div><div style="padding:32px;"><p>Dear ' + n + '</p><p>Welcome to Riya. Your token: <strong>' + t + '</strong></p><p><a href="https://riya-pilot.netlify.app">Open Riya</a></p><p>Toelie Pienaar<br/>083 325 8672</p></div></div></div>'
     });
     console.log('Welcome email sent to:', e);
   } catch(err) {
@@ -19,46 +23,125 @@ async function sendWelcomeEmail(n, e, t) {
   }
 }
 
+function parseRoAContent(rawText) {
+  const sections = [];
+  const lines = rawText.split('\n');
+  let currentSection = null;
+  let currentContent = [];
+  const cleanLines = [];
+  let foundAcceptance = false;
+  for (const line of lines) {
+    if (line.includes('This is a basic acceptance record')) { foundAcceptance = true; }
+    if (!foundAcceptance) { cleanLines.push(line); }
+  }
+  for (const line of cleanLines) {
+    const sectionMatch = line.match(/^(\d+)\.\s+(.+)/);
+    if (sectionMatch) {
+      if (currentSection) { sections.push({ title: currentSection, content: currentContent.join('\n').trim() }); }
+      currentSection = line.trim();
+      currentContent = [];
+    } else {
+      currentContent.push(line);
+    }
+  }
+  if (currentSection) { sections.push({ title: currentSection, content: currentContent.join('\n').trim() }); }
+  return { sections };
+}
+
+function buildWordDoc(clientName, brokerName, roaContent) {
+  const DARK = '1B2A2F';
+  const GOLD = 'C9A86A';
+  const GREEN = '2E5E4E';
+  const WHITE = 'FFFFFF';
+  const { sections } = parseRoAContent(roaContent);
+  const children = [];
+
+  children.push(new Paragraph({
+    spacing: { after: 0 },
+    shading: { fill: DARK, type: ShadingType.CLEAR },
+    alignment: AlignmentType.CENTER,
+    children: [new TextRun({ text: 'RECORD OF ADVICE', bold: true, size: 36, color: WHITE, font: 'Arial' })]
+  }));
+
+  children.push(new Paragraph({
+    spacing: { after: 200 },
+    shading: { fill: GREEN, type: ShadingType.CLEAR },
+    alignment: AlignmentType.CENTER,
+    children: [new TextRun({ text: 'FAIS & GCoC Compliant  |  Africa Bloom (Pty) Ltd  |  ' + new Date().toLocaleDateString('en-ZA'), size: 18, color: GOLD, font: 'Arial', italics: true })]
+  }));
+
+  children.push(new Paragraph({
+    spacing: { before: 100, after: 200 },
+    children: [
+      new TextRun({ text: 'Client: ', bold: true, size: 22, font: 'Arial', color: DARK }),
+      new TextRun({ text: clientName, size: 22, font: 'Arial', color: DARK })
+    ]
+  }));
+
+  for (const section of sections) {
+    if (section.title.toUpperCase().includes('RECORD OF ADVICE')) continue;
+
+    children.push(new Paragraph({
+      spacing: { before: 240, after: 80 },
+      shading: { fill: DARK, type: ShadingType.CLEAR },
+      border: { bottom: { style: BorderStyle.SINGLE, size: 4, color: GOLD } },
+      children: [new TextRun({ text: '  ' + section.title.toUpperCase() + '  ', bold: true, size: 22, color: GOLD, font: 'Arial' })]
+    }));
+
+    const contentLines = section.content.split('\n');
+    for (const line of contentLines) {
+      const trimmed = line.trim();
+      if (!trimmed) { children.push(new Paragraph({ spacing: { after: 60 }, children: [] })); continue; }
+      const isSubHeading = trimmed.endsWith(':') && trimmed.length < 60;
+      const isBullet = trimmed.startsWith('•') || trimmed.startsWith('-') || trimmed.startsWith('*');
+
+      if (isSubHeading) {
+        children.push(new Paragraph({
+          spacing: { before: 120, after: 60 },
+          children: [new TextRun({ text: trimmed, bold: true, size: 20, font: 'Arial', color: GREEN })]
+        }));
+      } else if (isBullet) {
+        children.push(new Paragraph({
+          spacing: { after: 60 },
+          indent: { left: 360 },
+          children: [new TextRun({ text: trimmed, size: 20, font: 'Arial', color: DARK })]
+        }));
+      } else {
+        children.push(new Paragraph({
+          spacing: { after: 80 },
+          children: [new TextRun({ text: trimmed, size: 20, font: 'Arial', color: DARK })]
+        }));
+      }
+    }
+  }
+
+  children.push(new Paragraph({
+    spacing: { before: 400 },
+    shading: { fill: DARK, type: ShadingType.CLEAR },
+    alignment: AlignmentType.CENTER,
+    children: [new TextRun({ text: 'Generated by Riya  |  Africa Bloom (Pty) Ltd  |  FAIS Act 37/2002  |  BN 80/2003  |  GN 706/2020', size: 16, color: GOLD, font: 'Arial', italics: true })]
+  }));
+
+  return new Document({
+    sections: [{
+      properties: { page: { margin: { top: 720, right: 720, bottom: 720, left: 720 } } },
+      children
+    }]
+  });
+}
+
 async function sendRoAEmail(brokerEmail, clientName, brokerName, roaContent) {
   try {
-    const wordDoc = new Document({
-      sections: [{
-        children: [
-          new Paragraph({
-            children: [new TextRun({ text: 'RECORD OF ADVICE', bold: true, size: 28 })],
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 200 }
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: 'Client: ' + clientName, bold: true })],
-            spacing: { after: 100 }
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: 'Generated: ' + new Date().toLocaleDateString() })],
-            spacing: { after: 300 }
-          }),
-          new Paragraph({
-            children: [new TextRun({ text: roaContent })],
-            spacing: { after: 100 }
-          })
-        ]
-      }]
-    });
-
+    const wordDoc = buildWordDoc(clientName, brokerName, roaContent);
     const buffer = await Packer.toBuffer(wordDoc);
     const base64Content = buffer.toString('base64');
-
     await getResend().emails.send({
       from: 'Riya <hello@riya.co.za>',
       to: brokerEmail,
-      subject: 'Record of Advice — ' + clientName + ' ' + new Date().toLocaleDateString(),
-      html: '<p>Hi ' + (brokerName || 'Adviser') + ',</p><p>Please find attached your Record of Advice for <strong>' + clientName + '</strong>.</p><p>Review and edit as needed before sending to your client.</p><p>Regards,<br/>Riya</p>',
-      attachments: [{
-        filename: clientName.replace(/\s+/g, '_') + '_RoA.docx',
-        content: base64Content
-      }]
+      subject: 'Record of Advice — ' + clientName + ' ' + new Date().toLocaleDateString('en-ZA'),
+      html: '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;"><div style="background:#1B2A2F;padding:24px 32px;"><div style="color:#C9A86A;font-size:24px;font-weight:bold;letter-spacing:2px;">RIYA</div><div style="color:#ffffff;font-size:12px;margin-top:4px;font-style:italic;">An RoA that checks its own homework.</div></div><div style="padding:32px;background:#ffffff;"><p>Hi ' + (brokerName || 'Adviser') + ',</p><p>Please find attached the Record of Advice for <strong>' + clientName + '</strong>.</p><p>Please review carefully and make any edits needed before forwarding to your client.</p><p>Regards,<br/>Riya<br/>083 325 8672</p></div></div>',
+      attachments: [{ filename: clientName.replace(/[^a-zA-Z0-9]/g, '_') + '_RoA.docx', content: base64Content }]
     });
-
     console.log('RoA email sent to:', brokerEmail);
     return { success: true };
   } catch(err) {
