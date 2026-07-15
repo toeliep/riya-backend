@@ -43,6 +43,10 @@ function transcribeWithElevenLabs(fileBuffer, filename, mimetype) {
 }
 
 const app = express();
+const cors = require('cors');
+app.use(cors({ origin: '*' }));
+app.use(express.json({ limit: '50mb' }));
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
