@@ -54,11 +54,11 @@ app.use((req, res, next) => {
   next();
 });
 
-const SYSTEM_ROA = "You are Riya, an expert South African FAIS compliance assistant. You produce professional, FAIS-compliant Records of Advice for South African short-term insurance brokers under the FAIS Act 37 of 2002, Board Notice 80 of 2003, and General Notice 706 of 2020.\nProduce a complete, professional RoA covering ALL of the following sections:\n1. FSP and Representative Details\n2. Client Identification and KYC/FICA/POPIA confirmation\n3. Needs Analysis - detailed risk profile and identified needs per asset category\n4. Market Comparison - all three insurers compared with reasons for recommendation\n5. Product Recommended - full Section 9(1) statutory detail including exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest declaration\n7. Replacement Advice (if applicable)\n8. Client Acceptance Record\nBe thorough and substantive. Use clear numbered headings. Write in professional English suitable for FSCA inspection. Do not cite case law. Do NOT use markdown tables - use labeled paragraphs and bullet points instead. CRITICAL LEGAL CITATIONS — always use these exact references: Financial Intelligence Centre Act 38 of 2001 (NOT 2020, NOT 1986); FAIS Act 37 of 2002; Short-Term Insurance Act 53 of 1998; POPIA Act 4 of 2013; Board Notice 80 of 2003; General Notice 706 of 2020.";
+const SYSTEM_ROA = "You are Riya, an expert South African FAIS compliance assistant. You produce professional, FAIS-compliant Records of Advice for South African short-term insurance brokers under the FAIS Act 37 of 2002, Board Notice 80 of 2003, and General Notice 706 of 2020.\nProduce a complete, professional RoA covering ALL of the following sections:\n1. FSP and Representative Details\n2. Client Identification and KYC/FICA/POPIA confirmation\n3. Needs Analysis - detailed risk profile and identified needs per asset category\n4. Market Comparison - all three insurers compared with reasons for recommendation\n5. Product Recommended - full Section 9(1) statutory detail including exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest declaration\n7. Replacement Advice (if applicable)\n8. Client Acceptance Record\nBe thorough and substantive. Use clear numbered headings. Write in professional English suitable for FSCA inspection. Do not cite case law. Do NOT use markdown tables - use labeled paragraphs and bullet points instead.";
 
-const SYSTEM_EXTRACT = "You are a South African FAIS insurance compliance assistant. Extract all available insurance and client details from the provided text. Return ONLY valid raw JSON - no preamble, no markdown, no backticks - with these exact keys: brokerName, fspNumber, advisorName, fspAddress, complianceOfficer, clientCommsMethod, clientName, clientContact, clientReg, clientEmail, clientAddress, businessNature, businessTurnover, fleetSize, fleetValue, fleetTypes, fleetTracking, gitRequired, gitLimit, gitGoods, insuranceClass, insurer, premium, sumInsured, coverBasis, exclusions, excessStructure, commission, cmp1Insurer, cmp1Premium, cmp1Excess, cmp1NotRec, cmpRecInsurer, cmpRecPremium, cmpRecExcess, cmpRecReason, cmp3Insurer, cmp3Premium, cmp3Excess, cmp3NotRec, replacement, replacementDetails, replacementReason, additionalFacts, conflictOfInterest, claimsNotes, triggerEvent, businessEmployees, publicLiabilityLimit, businessInterruptionRequired, vehicles, buildOwns, buildValue, buildSecurity, contentsSumInsured, scheduledItems. Use empty string for any field not found. For vehicles: extract as a JSON array of objects, each with keys: year, make, model, regNo, retailValue, primaryUse, driverAge, tracking, financed, overnightParking. Extract ALL vehicles mentioned. For buildOwns: use Yes-freehold if client owns home freehold, Yes-sectional-title if sectional title, No-renting if renting. For buildValue: extract the replacement/rebuild value as a number string. For buildSecurity: extract any security measures mentioned. For contentsSumInsured: extract contents sum insured as a number string. For clientContact: extract ONLY the phone/cell number as digits and spaces e.g. 071 882 3345 — never extract a person name into this field. For insuranceClass: if the client is a business, company, or contractor, ALWAYS start with Commercial-Lines e.g. Commercial-Lines-Motor-Plant-Equipment. If personal consumer, start with Personal-Lines. For triggerEvent: MUST be exactly one of these four values only: new, renewal, amendment, telephone. Use new if this is a new policy or new business. Use renewal if an existing policy is being renewed. Use amendment if cover is being changed. Use telephone if this is a telephone advice record. Default to new if unclear. For businessEmployees: extract number of permanent employees as a string. For publicLiabilityLimit: extract the public liability limit required as a string e.g. R10,000,000. For businessInterruptionRequired: set to Yes if business interruption cover is mentioned or required, otherwise No. For scheduledItems: extract as a semicolon-separated string of scheduled/all-risk items with values e.g. Rolex Submariner R65000; Laptop R28000. Include ALL valuable items mentioned with their values. For vehicles array: for each vehicle, set financed to YES if the text mentions finance, bond, WesBank, Absa, Nedbank, FNB, or any bank in relation to that vehicle, otherwise NO. Set overnightParking from any parking description. For clientCommsMethod: extract how the broker met or communicated with the client e.g. Home visit, Office meeting, Telephone, Email. For insuranceClass: extract the full insurance class e.g. Personal Lines - Motor, Household Contents, Buildings. For sumInsured: extract the total sum insured across all assets as a descriptive string e.g. Motor R680000 and R165000, Contents R380000, Buildings R2100000. CRITICAL RULE FOR replacement FIELD: only set replacement to YES if the text explicitly describes an existing policy being replaced, switched, or cancelled in favour of a new one (for example explicit phrases like existing policy with, currently insured with, switching from, replacing cover with). If the text describes a New Policy or does not mention any existing cover at all, replacement MUST be NO. Do not infer or assume a replacement scenario - default to NO whenever uncertain. CRITICAL RULE FOR cmpRecInsurer: this field must contain the insurer the broker explicitly marked or described as recommended, accepted, or chosen - never the insurer described as not recommended, rejected, or having reputation concerns, even if it is mentioned first or most prominently in the text.";
+const SYSTEM_EXTRACT = "You are a South African FAIS insurance compliance assistant. Extract all available insurance and client details from the provided text. Return ONLY valid raw JSON - no preamble, no markdown, no backticks - with these exact keys: brokerName, fspNumber, advisorName, fspAddress, complianceOfficer, clientCommsMethod, clientName, clientContact, clientReg, clientEmail, clientAddress, businessNature, businessTurnover, fleetSize, fleetValue, fleetTypes, fleetTracking, gitRequired, gitLimit, gitGoods, insuranceClass, insurer, premium, sumInsured, coverBasis, exclusions, excessStructure, commission, cmp1Insurer, cmp1Premium, cmp1Excess, cmp1NotRec, cmpRecInsurer, cmpRecPremium, cmpRecExcess, cmpRecReason, cmp3Insurer, cmp3Premium, cmp3Excess, cmp3NotRec, replacement, replacementDetails, replacementReason, additionalFacts, conflictOfInterest, claimsNotes. Use empty string for any field not found. CRITICAL RULE FOR replacement FIELD: only set replacement to YES if the text explicitly describes an existing policy being replaced, switched, or cancelled in favour of a new one (for example explicit phrases like existing policy with, currently insured with, switching from, replacing cover with). If the text describes a New Policy or does not mention any existing cover at all, replacement MUST be NO. Do not infer or assume a replacement scenario - default to NO whenever uncertain. CRITICAL RULE FOR cmpRecInsurer: this field must contain the insurer the broker explicitly marked or described as recommended, accepted, or chosen - never the insurer described as not recommended, rejected, or having reputation concerns, even if it is mentioned first or most prominently in the text.";
 
-const SYSTEM_SUFFICIENCY = "You are a South African FAIS insurance compliance assistant checking whether a broker input contains enough information to produce a defensible Record of Advice. You will be given the broker raw input text, the Trigger Event, and the Lines of Business. Return ONLY a valid raw JSON array of short strings, no preamble, no markdown, no backticks. Each string describes ONE specific missing piece of essential information. If everything essential is present, return exactly []. NEW POLICY needs client identity, one concrete asset with detail, one insurer and premium. Flag but do not invent: a market comparison if only one insurer is mentioned; KYC confirmations if not stated; for Commercial, turnover and Gross Profit if Business Interruption is mentioned with no financials; liability limits if a liability type is mentioned with no limit. PERSONAL LINES RULES — do NOT flag any of the following as missing: income, occupation, employment status, or dependents (not required for standard personal lines RoA); premium breakdown per cover section (a single all-in premium is acceptable); confirmation that sum insured amounts are agreed vs estimated when specific rand values are clearly stated in the notes; general needs analysis documentation when assets and cover requirements are clearly described. For personal lines, limit flags to genuine FAIS gaps only: missing KYC if not mentioned, missing market comparison if only one insurer quoted on new business, missing replacement advice confirmation if switching insurers, missing excess structure if no excess mentioned at all. RENEWAL needs an existing policy reference and a premium figure. CRITICAL: only expect a market comparison if the input explicitly says the client was re-marketed to other insurers. If the input only describes the existing insurer renewal with no competing quotes, do NOT flag the absence of a market comparison, this is correct expected behaviour. Flag what has changed since last period if nothing is mentioned. AMENDMENT needs an existing policy reference and a description of the change. Never flag missing market comparison for an amendment. If the change involves moving to a different insurer, flag this as possibly a Policy Replacement needing fuller documentation. TELEPHONE ADVICE needs a date and a description of what was discussed and advised. Do not flag missing needs analysis or market comparison unless the call covered that ground, these records are expected to be short. If Renewal has no policy reference at all, do not refuse, still generate with the gap flagged prominently.";
+const SYSTEM_SUFFICIENCY = "You are a South African FAIS insurance compliance assistant checking whether a broker input contains enough information to produce a defensible Record of Advice. You will be given the broker raw input text, the Trigger Event, and the Lines of Business. Return ONLY a valid raw JSON array of short strings, no preamble, no markdown, no backticks. Each string describes ONE specific missing piece of essential information. If everything essential is present, return exactly []. NEW POLICY needs client identity, one concrete asset with detail, one insurer and premium. Flag but do not invent: a market comparison if only one insurer is mentioned; KYC confirmations if not stated; for Commercial, turnover and Gross Profit if Business Interruption is mentioned with no financials; liability limits if a liability type is mentioned with no limit. RENEWAL needs an existing policy reference and a premium figure. CRITICAL: only expect a market comparison if the input explicitly says the client was re-marketed to other insurers. If the input only describes the existing insurer renewal with no competing quotes, do NOT flag the absence of a market comparison, this is correct expected behaviour. Flag what has changed since last period if nothing is mentioned. AMENDMENT needs an existing policy reference and a description of the change. Never flag missing market comparison for an amendment. If the change involves moving to a different insurer, flag this as possibly a Policy Replacement needing fuller documentation. TELEPHONE ADVICE needs a date and a description of what was discussed and advised. Do not flag missing needs analysis or market comparison unless the call covered that ground, these records are expected to be short. If Renewal has no policy reference at all, do not refuse, still generate with the gap flagged prominently.";
 
 function callClaude(apiKey, system, user, maxTokens) {
   return new Promise((resolve, reject) => {
@@ -363,7 +363,7 @@ app.post('/create-payment', async (req, res) => {
 });
 
 app.post('/payfast-webhook', async (req, res) => {
-  const { payment_status, custom_str1, custom_int1, pf_payment_id } = req.body;
+  const { payment_status, custom_str1, custom_int1 } = req.body;
 
   if (payment_status !== 'COMPLETE') return res.sendStatus(200);
 
@@ -372,19 +372,7 @@ app.post('/payfast-webhook', async (req, res) => {
 
   if (!token || !credits) return res.sendStatus(200);
 
-  if (!pf_payment_id) {
-    console.error('Webhook missing pf_payment_id - cannot verify idempotency, skipping to avoid duplicate credit risk');
-    return res.sendStatus(200);
-  }
-
   try {
-    // Check if this exact payment has already been processed
-    const existing = await supabaseRequest('GET', 'processed_payments?pf_payment_id=eq.' + encodeURIComponent(pf_payment_id) + '&select=id');
-    if (existing && existing.length > 0) {
-      console.log('Payment ' + pf_payment_id + ' already processed - skipping duplicate webhook call');
-      return res.sendStatus(200);
-    }
-
     const broker = await validateBrokerToken(token);
     if (!broker) return res.sendStatus(200);
 
@@ -392,13 +380,7 @@ app.post('/payfast-webhook', async (req, res) => {
       credits: broker.credits + credits
     });
 
-    await supabaseRequest('POST', 'processed_payments', {
-      pf_payment_id: pf_payment_id,
-      broker_token: token,
-      credits_added: credits
-    });
-
-    console.log('Credits added: ' + credits + ' to ' + token + ' (payment ' + pf_payment_id + ')');
+    console.log('Credits added: ' + credits + ' to ' + token);
   } catch(e) {
     console.error('Webhook error:', e.message);
   }
@@ -407,59 +389,4 @@ app.post('/payfast-webhook', async (req, res) => {
 });
 
 app.post('/create-token', async (req, res) => { const {name,email,token,fsp_number,plan,credits} = req.body; if(!name||!email||!token) return res.status(400).json({error:'missing fields'}); try { const r = await fetch(process.env.SUPABASE_URL+'/rest/v1/brokers',{method:'POST',headers:{'Content-Type':'application/json','apikey':process.env.SUPABASE_SERVICE_KEY,'Authorization':'Bearer '+process.env.SUPABASE_SERVICE_KEY,'Prefer':'return=representation'},body:JSON.stringify({name,email,token,fsp_number:fsp_number||null,plan:plan||'pilot',credits:credits||5,credits_used:0,status:'active'})}); if(!r.ok){const e=await r.text();return res.status(500).json({error:e});} await sendWelcomeEmail(name,email,token); res.json({success:true}); } catch(err){res.status(500).json({error:err.message});} });
-// Email endpoint with Word attachment
-const { Document, Packer } = require('docx');
-const { Paragraph, TextRun, AlignmentType } = require('docx');
-const path = require('path');
-
-app.post('/send-roa-to-broker', async (req, res) => {
-  try {
-    const { roaContent, brokerEmail, clientName, brokerName } = req.body;
-
-    if (!roaContent || !brokerEmail || !clientName) {
-      return res.status(400).json({ error: 'Missing required fields' });
-    }
-
-    const wordDoc = new Document({
-      sections: [{
-        children: [
-          new Paragraph({
-            text: 'RECORD OF ADVICE',
-            heading: 'Heading1',
-            alignment: AlignmentType.CENTER,
-            spacing: { after: 200 }
-          }),
-          new Paragraph({
-            text: `Client: ${clientName}`,
-            spacing: { after: 100 }
-          }),
-          new Paragraph({
-            text: roaContent,
-            spacing: { after: 100 }
-          })
-        ]
-      }]
-    });
-
-    const buffer = await Packer.toBuffer(wordDoc);
-    const base64Content = buffer.toString('base64');
-
-    const response = await resend.emails.send({
-      from: 'Riya <noreply@riya-pilot.com>',
-      to: brokerEmail,
-      subject: `Record of Advice — ${clientName}`,
-      html: `<p>Hi ${brokerName || 'Adviser'},</p><p>Please find attached your Record of Advice for <strong>${clientName}</strong>.</p><p>Review and edit as needed before sending to your client.</p>`,
-      attachments: [{
-        filename: `${clientName}_RoA.docx`,
-        content: base64Content
-      }]
-    });
-
-    return res.status(200).json({ success: true, emailId: response.id });
-  } catch (error) {
-    console.error('Error:', error);
-    return res.status(500).json({ error: error.message });
-  }
-});
-
 app.listen(PORT, () => console.log('Riya backend listening on port ' + PORT));

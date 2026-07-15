@@ -1,0 +1,1 @@
+let code = fs.readFileSync('index.js', 'utf8'); 

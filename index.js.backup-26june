@@ -1,0 +1,316 @@
+const express = require('express');
+const { sendWelcomeEmail } = require('./resend_helper');
+const PDFDocument = require('pdfkit');
+
+const https = require('https');
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+app.use((req, res, next) => {
+  res.header('Access-Control-Allow-Origin', '*');
+  res.header('Access-Control-Allow-Headers', 'Content-Type');
+  res.header('Access-Control-Allow-Methods', 'POST, OPTIONS');
+  if (req.method === 'OPTIONS') return res.sendStatus(200);
+  next();
+});
+
+const SYSTEM_ROA = "You are Riya, an expert South African FAIS compliance assistant. You produce professional, FAIS-compliant Records of Advice for South African short-term insurance brokers under the FAIS Act 37 of 2002, Board Notice 80 of 2003, and General Notice 706 of 2020.\nProduce a complete, professional RoA covering ALL of the following sections:\n1. FSP and Representative Details\n2. Client Identification and KYC/FICA/POPIA confirmation\n3. Needs Analysis - detailed risk profile and identified needs per asset category\n4. Market Comparison - all three insurers compared with reasons for recommendation\n5. Product Recommended - full Section 9(1) statutory detail including exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest declaration\n7. Replacement Advice (if applicable)\n8. Client Acceptance Record\nBe thorough and substantive. Use clear numbered headings. Write in professional English suitable for FSCA inspection. Do not cite case law. Do NOT use markdown tables - use labeled paragraphs and bullet points instead.";
+
+const SYSTEM_EXTRACT = "You are a South African FAIS insurance compliance assistant. Extract all available insurance and client details from the provided text. Return ONLY valid raw JSON - no preamble, no markdown, no backticks - with these exact keys: brokerName, fspNumber, advisorName, fspAddress, complianceOfficer, clientCommsMethod, clientName, clientContact, clientReg, clientEmail, clientAddress, businessNature, businessTurnover, fleetSize, fleetValue, fleetTypes, fleetTracking, gitRequired, gitLimit, gitGoods, insuranceClass, insurer, premium, sumInsured, coverBasis, exclusions, excessStructure, commission, cmp1Insurer, cmp1Premium, cmp1Excess, cmp1NotRec, cmpRecInsurer, cmpRecPremium, cmpRecExcess, cmpRecReason, cmp3Insurer, cmp3Premium, cmp3Excess, cmp3NotRec, replacement, replacementDetails, replacementReason, additionalFacts, conflictOfInterest, claimsNotes. Use empty string for any field not found. CRITICAL RULE FOR replacement FIELD: only set replacement to YES if the text explicitly describes an existing policy being replaced, switched, or cancelled in favour of a new one (for example explicit phrases like existing policy with, currently insured with, switching from, replacing cover with). If the text describes a New Policy or does not mention any existing cover at all, replacement MUST be NO. Do not infer or assume a replacement scenario - default to NO whenever uncertain. CRITICAL RULE FOR cmpRecInsurer: this field must contain the insurer the broker explicitly marked or described as recommended, accepted, or chosen - never the insurer described as not recommended, rejected, or having reputation concerns, even if it is mentioned first or most prominently in the text.";
+
+const SYSTEM_SUFFICIENCY = "You are a South African FAIS insurance compliance assistant checking whether a broker input contains enough information to produce a defensible Record of Advice. You will be given the broker raw input text, the Trigger Event, and the Lines of Business. Return ONLY a valid raw JSON array of short strings, no preamble, no markdown, no backticks. Each string describes ONE specific missing piece of essential information. If everything essential is present, return exactly []. NEW POLICY needs client identity, one concrete asset with detail, one insurer and premium. Flag but do not invent: a market comparison if only one insurer is mentioned; KYC confirmations if not stated; for Commercial, turnover and Gross Profit if Business Interruption is mentioned with no financials; liability limits if a liability type is mentioned with no limit. RENEWAL needs an existing policy reference and a premium figure. CRITICAL: only expect a market comparison if the input explicitly says the client was re-marketed to other insurers. If the input only describes the existing insurer renewal with no competing quotes, do NOT flag the absence of a market comparison, this is correct expected behaviour. Flag what has changed since last period if nothing is mentioned. AMENDMENT needs an existing policy reference and a description of the change. Never flag missing market comparison for an amendment. If the change involves moving to a different insurer, flag this as possibly a Policy Replacement needing fuller documentation. TELEPHONE ADVICE needs a date and a description of what was discussed and advised. Do not flag missing needs analysis or market comparison unless the call covered that ground, these records are expected to be short. If Renewal has no policy reference at all, do not refuse, still generate with the gap flagged prominently.";
+
+function callClaude(apiKey, system, user, maxTokens) {
+  return new Promise((resolve, reject) => {
+    const payload = JSON.stringify({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: maxTokens || 1500,
+      system: system,
+      messages: [{ role: 'user', content: user }]
+    });
+    const options = {
+      hostname: 'api.anthropic.com',
+      path: '/v1/messages',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'Content-Length': Buffer.byteLength(payload)
+      }
+    };
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        try {
+          const parsed = JSON.parse(data);
+          if (res.statusCode !== 200) reject(new Error('Status ' + res.statusCode + ': ' + (parsed.error && parsed.error.message || 'API error')));
+          else resolve(parsed.content && parsed.content.map(b => b.text || '').join('') || '');
+        } catch(e) { reject(new Error('Parse error: ' + e.message)); }
+      });
+    });
+    req.on('error', e => reject(new Error('Network: ' + e.message)));
+    req.write(payload);
+    req.end();
+  });
+}
+
+
+function supabaseRequest(method, path, body) {
+  return new Promise((resolve, reject) => {
+    const payload = body ? JSON.stringify(body) : null;
+    const options = {
+      hostname: 'sunihvgxtqbjjuvnrpof.supabase.co',
+      path: '/rest/v1/' + path,
+      method: method,
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': process.env.SUPABASE_SERVICE_KEY,
+        'Authorization': 'Bearer ' + process.env.SUPABASE_SERVICE_KEY,
+        'Prefer': 'return=representation'
+      }
+    };
+    if (payload) options.headers['Content-Length'] = Buffer.byteLength(payload);
+    const req = https.request(options, (res) => {
+      let data = '';
+      res.on('data', chunk => data += chunk);
+      res.on('end', () => {
+        console.log('SUPABASE RESPONSE [' + path + ']: status=' + res.statusCode + ' body=' + data);
+        try { resolve(JSON.parse(data)); }
+        catch(e) { resolve([]); }
+      });
+    });
+    req.on('error', e => reject(e));
+    if (payload) req.write(payload);
+    req.end();
+  });
+}
+
+async function validateBrokerToken(token) {
+  const result = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(token) + '&select=*');
+  if (!result || !result.length) return null;
+  return result[0];
+}
+
+async function deductCredit(token, roaType, broker) {
+  await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
+    credits: broker.credits - 1,
+    credits_used: broker.credits_used + 1,
+    last_used: new Date().toISOString()
+  });
+  await supabaseRequest('POST', 'usage_log', {
+    token: token,
+    broker_name: broker.name,
+    roa_type: roaType || 'unknown'
+  });
+}
+
+app.post('/generate-roa', async (req, res) => {
+  const { user, mode, token } = req.body;
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  const masterToken = process.env.RIYA_ACCESS_TOKEN;
+
+  if (!token) return res.status(401).json({ error: 'No token provided.' });
+
+  let broker = null;
+  if (token !== masterToken) {
+    broker = await validateBrokerToken(token);
+    if (!broker) return res.status(401).json({ error: 'Invalid token.' });
+    if (broker.status !== 'active') return res.status(403).json({ error: 'Account suspended. Contact support.' });
+    if (broker.credits <= 0) return res.status(403).json({ error: 'No credits remaining. Please top up to continue.' });
+  }
+
+  if (!apiKey) return res.status(500).json({ error: 'Server configuration error.' });
+
+  try {
+    if (mode === 'extract') {
+      const result = await callClaude(apiKey, SYSTEM_EXTRACT, user, 2000);
+      return res.json({ content: [{ type: 'text', text: result }] });
+    }
+
+    if (mode === 'sufficiency') {
+      const triggerEvent = req.body.triggerEvent;
+      const linesOfBusiness = req.body.linesOfBusiness;
+      const sufficiencyPrompt = 'Trigger Event: ' + (triggerEvent || 'New Policy') + '\nLines of Business: ' + (linesOfBusiness || 'Personal') + '\n\nBroker input:\n' + user;
+      const result2 = await callClaude(apiKey, SYSTEM_SUFFICIENCY, sufficiencyPrompt, 1000);
+      const cleaned2 = result2.trim().replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
+      let gaps = [];
+      try { gaps = JSON.parse(cleaned2); if (!Array.isArray(gaps)) gaps = []; } catch(e) { gaps = []; }
+      return res.json({ gaps: gaps });
+    }
+
+    const user1 = user + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. Be concise - bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. STOP HERE.';
+    let part1 = '';
+    try { part1 = await callClaude(apiKey, SYSTEM_ROA, user1, 2000); } catch(e) { part1 = 'Error: ' + e.message; }
+
+    const user2 = user + '\n\n--- PRIOR SECTIONS (1 AND 2), READ SILENTLY FOR CONTEXT - DO NOT OUTPUT, REPEAT, REPRODUCE, SUMMARISE OR REFERENCE THIS BLOCK IN ANY WAY ---\n' + part1 + '\n--- END OF PRIOR SECTIONS ---\n\nYour response must begin DIRECTLY with the heading for section 3. Do not include any title, heading, restatement, or summary of sections 1 or 2 anywhere in your response. Generate ONLY sections 3 and 4. Do not generate any other sections. Be consistent with the FSP, client and trigger details already established above. Be concise - bullet points only.\n3. Needs Analysis - one short paragraph per asset class relevant to what changed or is being discussed (motor, buildings, contents, all-risk, liability). For Amendment or Telephone Advice triggers, keep this brief and focused only on the specific change or query, not a full fresh needs analysis.\n4. Market Comparison - CRITICAL RULE: only produce a genuine multi-insurer comparison if the input explicitly contains real quotes or premiums from more than one insurer. If this is an Amendment, Telephone Advice, or a Renewal with no re-marketing mentioned, and no genuine multi-insurer data is present in the input, write exactly: Market Comparison - Not applicable - this is a [trigger type] and no new market comparison was required or conducted. Do NOT invent insurer names, premiums, or a comparison that was not actually provided. STOP HERE.';
+    let part2 = '';
+    try { part2 = await callClaude(apiKey, SYSTEM_ROA, user2, 2500); } catch(e) { part2 = 'Error: ' + e.message; }
+
+    const user3 = user + '\n\n--- PRIOR SECTIONS (3 AND 4), READ SILENTLY FOR CONTEXT - DO NOT OUTPUT, REPEAT, REPRODUCE, SUMMARISE OR REFERENCE THIS BLOCK IN ANY WAY ---\n' + part2 + '\n--- END OF PRIOR SECTIONS ---\n\nYour response must begin DIRECTLY with the heading for section 5. Do not include any title, heading, restatement, or summary of sections 3 or 4 anywhere in your response. Generate ONLY sections 5 to 8. CRITICAL: Section 5 (Product Recommended) MUST recommend the EXACT SAME insurer that was identified as recommended in the Market Comparison section above - do not introduce a different insurer or different premium figures. Be concise - bullet points only.\n5. Product Recommended - sum insured schedule, exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest\n7. Replacement Advice\n8. Client Acceptance Record. End with the Riya footer.';
+
+    let part3 = '';
+    try { part3 = await callClaude(apiKey, SYSTEM_ROA, user3, 4000); } catch(e) { part3 = 'Error: ' + e.message; }
+
+    const combined = (part1 + '\n\n---\n\n' + part2 + '\n\n---\n\n' + part3).trim();
+
+    let warnings = [];
+    try {
+      const verifyPrompt = 'BROKER INPUT:\n' + user + '\n\nGENERATED DOCUMENT:\n' + combined + '\n\nList ONLY specific facts in the GENERATED DOCUMENT that do NOT appear anywhere in the BROKER INPUT above. Check CAREFULLY for: any insurer, company, or institution name mentioned in the document that does NOT appear in the broker input at all - this is the most serious issue, flag the entire fabricated company by name; invented insurer ratings, complaint counts, claims timeframes; specific sums insured not stated by the broker; fabricated conflict-of-interest scenarios; any invented dates, numbers, or names. Return ONLY a JSON array of short strings, each phrased as Not confirmed in your input - followed by the specific detail - rather than using the word invented or fabricated. If nothing is unconfirmed, return exactly: []';
+      const verifyResult = await callClaude(apiKey, 'You are a strict fact-checker. Output ONLY a raw JSON array, nothing else.', verifyPrompt, 800);
+      const cleaned = verifyResult.trim().replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
+      warnings = JSON.parse(cleaned);
+      if (!Array.isArray(warnings)) warnings = [];
+    } catch(e) { warnings = []; }
+
+    if (broker) {
+      const roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
+    const creditCost = roaType === 'commercial' ? 3 : 2;
+      await deductCredit(token, roaType, broker, creditCost);
+    }
+
+    return res.json({ content: [{ type: 'text', text: combined }], warnings: warnings });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.post('/generate-pdf', async (req, res) => {
+  const { text, clientName, fspName, triggerLabel, adviceDate } = req.body;
+  if (!text) return res.status(400).json({ error: 'No text provided' });
+  try {
+    const doc = new PDFDocument({ margin: 50, size: 'A4', font: __dirname + '/notosans-regular.ttf' });
+    doc.registerFont('Regular', __dirname + '/notosans-regular.ttf');
+    doc.registerFont('Bold', __dirname + '/notosans-bold.ttf');
+    const chunks = [];
+    doc.on('data', chunk => chunks.push(chunk));
+    doc.on('end', () => {
+      const pdfBuffer = Buffer.concat(chunks);
+      res.setHeader('Content-Type', 'application/pdf');
+      res.setHeader('Content-Disposition', 'attachment; filename="RoA.pdf"');
+      res.send(pdfBuffer);
+    });
+    doc.font('Bold').fontSize(18).fillColor('#1F4E5F').text('Record of Advice', { align: 'left' });
+    doc.moveDown(0.3);
+    doc.font('Regular').fontSize(10).fillColor('#595959')
+      .text((triggerLabel || 'Record of Advice') + '   |   ' + (fspName || 'FSP') + '   |   ' + (clientName || 'Client') + '   |   ' + (adviceDate || new Date().toLocaleDateString('en-ZA')));
+    doc.moveDown(0.5);
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#CCCCCC').stroke();
+    doc.moveDown(0.8);
+    const lines = text.split('\n');
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed) { doc.moveDown(0.4); continue; }
+      if (/^#{1,3}\s/.test(trimmed) || /^\d+\.\s+[A-Z]/.test(trimmed)) {
+        doc.moveDown(0.3);
+        doc.font('Bold').fontSize(12).fillColor('#1F4E5F').text(trimmed.replace(/^#{1,3}\s/, ''));
+        doc.moveDown(0.2);
+      } else if (trimmed.startsWith('---')) {
+        doc.moveDown(0.2);
+        doc.moveTo(50, doc.y).lineTo(545, doc.y).strokeColor('#EEEEEE').stroke();
+        doc.moveDown(0.2);
+      } else {
+        doc.font('Regular').fontSize(10).fillColor('#1A1A1A').text(trimmed, { align: 'left' });
+      }
+    }
+    doc.end();
+  } catch(err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/credits', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'Token required.' });
+  const broker = await validateBrokerToken(token);
+  if (!broker) return res.status(404).json({ error: 'Token not found.' });
+  return res.json({ name: broker.name, credits: broker.credits, credits_used: broker.credits_used, status: broker.status });
+});
+
+app.post('/record-acceptance', async (req, res) => {
+  const { roa_token, client_name, client_email, broker_token } = req.body;
+  if (!client_name || !client_email) return res.status(400).json({ error: 'Client name and email are required.' });
+  try {
+    await supabaseRequest('POST', 'acceptances', {
+      roa_token: roa_token || null,
+      client_name: client_name,
+      client_email: client_email,
+      broker_token: broker_token || null
+    });
+    return res.json({ success: true, accepted_at: new Date().toISOString() });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/', (req, res) => res.send('Riya backend running.'));
+
+const PORT = process.env.PORT || 3000;
+
+app.post('/create-payment', async (req, res) => {
+  const { token, bundle } = req.body;
+  if (!token) return res.status(400).json({ error: 'Token required.' });
+
+  const bundles = {
+    starter:  { credits: 20,  amount: '100.00',  name: 'Riya Starter — 10 RoAs' },
+    standard: { credits: 80,  amount: '400.00',  name: 'Riya Standard — 40 RoAs' },
+    pro:      { credits: 200, amount: '1000.00', name: 'Riya Pro — 100 RoAs' },
+    catchup:  { credits: 500, amount: '2500.00', name: 'Riya Catch-Up — 250 RoAs' }
+  };
+
+  const selected = bundles[bundle];
+  if (!selected) return res.status(400).json({ error: 'Invalid bundle.' });
+
+  const merchantId = process.env.PAYFAST_MERCHANT_ID;
+  const merchantKey = process.env.PAYFAST_MERCHANT_KEY;
+
+  const paymentData = {
+    merchant_id: merchantId,
+    merchant_key: merchantKey,
+    return_url: 'https://riya-pilot.netlify.app?payment=success',
+    cancel_url: 'https://riya-pilot.netlify.app?payment=cancelled',
+    notify_url: 'https://riya-backend-production.up.railway.app/payfast-webhook',
+    item_name: selected.name,
+    amount: selected.amount,
+    custom_str1: token,
+    custom_int1: selected.credits.toString()
+  };
+
+  const params = Object.entries(paymentData)
+    .map(([k, v]) => k + '=' + encodeURIComponent(v).replace(/%20/g, '+'))
+    .join('&');
+
+  const payUrl = 'https://www.payfast.co.za/eng/process?' + params;
+  return res.json({ url: payUrl });
+});
+
+app.post('/payfast-webhook', async (req, res) => {
+  const { payment_status, custom_str1, custom_int1 } = req.body;
+
+  if (payment_status !== 'COMPLETE') return res.sendStatus(200);
+
+  const token = custom_str1;
+  const credits = parseInt(custom_int1 || '0');
+
+  if (!token || !credits) return res.sendStatus(200);
+
+  try {
+    const broker = await validateBrokerToken(token);
+    if (!broker) return res.sendStatus(200);
+
+    await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
+      credits: broker.credits + credits
+    });
+
+    console.log('Credits added: ' + credits + ' to ' + token);
+  } catch(e) {
+    console.error('Webhook error:', e.message);
+  }
+
+  return res.sendStatus(200);
+});
+
+app.post('/create-token', async (req, res) => { const {name,email,token,fsp_number,plan,credits} = req.body; if(!name||!email||!token) return res.status(400).json({error:'missing fields'}); try { const r = await fetch(process.env.SUPABASE_URL+'/rest/v1/brokers',{method:'POST',headers:{'Content-Type':'application/json','apikey':process.env.SUPABASE_SERVICE_KEY,'Authorization':'Bearer '+process.env.SUPABASE_SERVICE_KEY,'Prefer':'return=representation'},body:JSON.stringify({name,email,token,fsp_number:fsp_number||null,plan:plan||'pilot',credits:credits||5,credits_used:0,status:'active'})}); if(!r.ok){const e=await r.text();return res.status(500).json({error:e});} await sendWelcomeEmail(name,email,token); res.json({success:true}); } catch(err){res.status(500).json({error:err.message});} });
+app.listen(PORT, () => console.log('Riya backend listening on port ' + PORT));

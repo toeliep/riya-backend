@@ -1,0 +1,18 @@
+const { Resend } = require('resend');
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+async function sendWelcomeEmail(n, e, t) {
+  try {
+    await resend.emails.send({
+      from: 'Riya <hello@riya.co.za>',
+      to: e,
+      subject: 'Welcome to Riya — Your Broker Token',
+      html: '<div style="font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:20px"><h2 style="color:#1F4E79">Welcome to Riya</h2><p>Dear ' + n + '</p><p>Your broker token:</p><p style="font-size:24px;font-weight:bold;color:#1F4E79">' + t + '</p><p>Go to <a href="https://riya-pilot.netlify.app">riya-pilot.netlify.app</a> and enter your token. First 5 RoAs free.</p><p>R10 personal lines | R15 commercial lines after free credits.</p><p>Questions: Toelie Pienaar | 083 325 8672</p></div>'
+    });
+    console.log('Email sent to:', e);
+  } catch(err) {
+    console.error('Email failed:', err.message);
+  }
+}
+
+module.exports = { sendWelcomeEmail };
