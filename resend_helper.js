@@ -57,21 +57,28 @@ function buildWordDoc(clientName, brokerName, roaContent, brokerToken) {
   const WHITE = 'FFFFFF';
   const { sections } = parseRoAContent(roaContent);
   const children = [];
-
-  // Add Kensten logo for RIYA-GOMES-001 - top right
+// Add broker logo - top right
   try {
-    const logoPath = path.join(__dirname, 'assets', 'kensten-logo.png');
-    if (brokerToken === 'RIYA-GOMES-001' && fs.existsSync(logoPath)) {
-      const logoBuffer = fs.readFileSync(logoPath);
-      children.push(new Paragraph({
-        alignment: AlignmentType.RIGHT,
-        spacing: { after: 100 },
-        children: [new ImageRun({ data: logoBuffer, transformation: { width: 110, height: 80 }, type: 'png' })]
-      }));
+    const logoMap = {
+      'RIYA-GOMES-001': { file: 'kensten-logo.png', width: 110, height: 80 },
+      'RIYA-MARX-001': { file: '1st-insurance-logo.png', width: 150, height: 50 }
+    };
+    const logoConfig = logoMap[brokerToken];
+    if (logoConfig) {
+      const logoPath = path.join(__dirname, 'assets', logoConfig.file);
+      if (fs.existsSync(logoPath)) {
+        const logoBuffer = fs.readFileSync(logoPath);
+        children.push(new Paragraph({
+          alignment: AlignmentType.RIGHT,
+          spacing: { after: 100 },
+          children: [new ImageRun({ data: logoBuffer, transformation: { width: logoConfig.width, height: logoConfig.height }, type: 'png' })]
+        }));
+      }
     }
   } catch(logoErr) {
     console.warn('Word logo error:', logoErr.message);
   }
+
 
   children.push(new Paragraph({
     spacing: { after: 0 },

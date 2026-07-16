@@ -276,9 +276,16 @@ app.post('/generate-pdf', async (req, res) => {
     // Add broker logo if available (top-right corner)
     try {
       const brokerToken = req.body.brokerToken || '';
-      const logoPath = __dirname + '/assets/kensten-logo.png';
-      if (brokerToken === 'RIYA-GOMES-001' && fs.existsSync(logoPath)) {
-        doc.image(logoPath, 430, 30, { width: 110, height: 80, fit: [110, 80] });
+      const logoMap = {
+        'RIYA-GOMES-001': { file: 'kensten-logo.png', width: 110, height: 80 },
+        'RIYA-MARX-001': { file: '1st-insurance-logo.png', width: 130, height: 50 }
+      };
+      const logoConfig = logoMap[brokerToken];
+      if (logoConfig) {
+        const logoPath = __dirname + '/assets/' + logoConfig.file;
+        if (fs.existsSync(logoPath)) {
+          doc.image(logoPath, 430, 30, { width: logoConfig.width, height: logoConfig.height, fit: [logoConfig.width, logoConfig.height] });
+        }
       }
     } catch(logoErr) {
       console.warn('Logo error:', logoErr.message);
