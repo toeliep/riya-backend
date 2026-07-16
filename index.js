@@ -1,4 +1,5 @@
 const express = require('express');
+const fs = require('fs');
 const { sendWelcomeEmail, sendRoAEmail } = require('./resend_helper');
 const PDFDocument = require('pdfkit');
 
