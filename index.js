@@ -279,7 +279,8 @@ app.post('/generate-pdf', async (req, res) => {
       const logoMap = {
         'RIYA-GOMES-001': { file: 'kensten-logo.png', width: 110, height: 80 },
         'RIYA-MARX-001': { file: '1st-insurance-logo.png', width: 130, height: 50 },
-        'RIYA-CRAFFORD-0001': { file: 'twk-logo.png', width: 80, height: 80 }
+        'RIYA-CRAFFORD-0001': { file: 'twk-logo.png', width: 80, height: 80 },
+        'RIYA-GROBLER-001': { file: 'galinco-logo.png', width: 140, height: 47 }
       };
       const logoConfig = logoMap[brokerToken];
       if (logoConfig) {
