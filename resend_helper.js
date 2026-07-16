@@ -2,7 +2,7 @@ const { Resend } = require('resend');
 const { 
   Document, Packer, Paragraph, TextRun, 
   AlignmentType, BorderStyle,
-  ShadingType
+  ShadingType, ImageRun
 } = require('docx');
 
 function getResend() {
@@ -48,13 +48,30 @@ function parseRoAContent(rawText) {
   return { sections };
 }
 
-function buildWordDoc(clientName, brokerName, roaContent) {
+function buildWordDoc(clientName, brokerName, roaContent, brokerToken) {
+  const fs = require('fs');
+  const path = require('path');
   const DARK = '1B2A2F';
   const GOLD = 'C9A86A';
   const GREEN = '2E5E4E';
   const WHITE = 'FFFFFF';
   const { sections } = parseRoAContent(roaContent);
   const children = [];
+
+  // Add Kensten logo for RIYA-GOMES-001 - top right
+  try {
+    const logoPath = path.join(__dirname, 'assets', 'kensten-logo.png');
+    if (brokerToken === 'RIYA-GOMES-001' && fs.existsSync(logoPath)) {
+      const logoBuffer = fs.readFileSync(logoPath);
+      children.push(new Paragraph({
+        alignment: AlignmentType.RIGHT,
+        spacing: { after: 100 },
+        children: [new ImageRun({ data: logoBuffer, transformation: { width: 110, height: 80 }, type: 'png' })]
+      }));
+    }
+  } catch(logoErr) {
+    console.warn('Word logo error:', logoErr.message);
+  }
 
   children.push(new Paragraph({
     spacing: { after: 0 },
@@ -130,9 +147,9 @@ function buildWordDoc(clientName, brokerName, roaContent) {
   });
 }
 
-async function sendRoAEmail(brokerEmail, clientName, brokerName, roaContent) {
+async function sendRoAEmail(brokerEmail, clientName, brokerName, roaContent, brokerToken) {
   try {
-    const wordDoc = buildWordDoc(clientName, brokerName, roaContent);
+    const wordDoc = buildWordDoc(clientName, brokerName, roaContent, brokerToken);
     const buffer = await Packer.toBuffer(wordDoc);
     const base64Content = buffer.toString('base64');
     await getResend().emails.send({

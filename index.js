@@ -453,7 +453,7 @@ app.post('/send-roa-to-broker', async (req, res) => {
     const brokerEmail = broker.email;
     const resolvedBrokerName = brokerName || broker.name || 'Adviser';
 
-    const result = await sendRoAEmail(brokerEmail, clientName, resolvedBrokerName, roaContent);
+    const result = await sendRoAEmail(brokerEmail, clientName, resolvedBrokerName, roaContent, brokerToken);
     if (result.success) {
       return res.status(200).json({ success: true, sentTo: brokerEmail });
     } else {
