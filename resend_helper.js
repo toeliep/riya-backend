@@ -59,10 +59,11 @@ function buildWordDoc(clientName, brokerName, roaContent, brokerToken) {
   const children = [];
 // Add broker logo - top right
   try {
-    const logoMap = {
+  const logoMap = {
       'RIYA-GOMES-001': { file: 'kensten-logo.png', width: 110, height: 80 },
-      'RIYA-MARX-001': { file: '1st-insurance-logo.png', width: 150, height: 50 }
-    };
+      'RIYA-MARX-001': { file: '1st-insurance-logo.png', width: 150, height: 50 },
+      'RIYA-CRAFFORD-0001': { file: 'twk-logo.png', width: 80, height: 80 }
+    };  
     const logoConfig = logoMap[brokerToken];
     if (logoConfig) {
       const logoPath = path.join(__dirname, 'assets', logoConfig.file);
