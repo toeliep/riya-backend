@@ -272,6 +272,16 @@ app.post('/generate-pdf', async (req, res) => {
       res.setHeader('Content-Disposition', 'attachment; filename="RoA.pdf"');
       res.send(pdfBuffer);
     });
+    // Add broker logo if available (top-right corner)
+    try {
+      const brokerToken = req.body.brokerToken || '';
+      const logoPath = __dirname + '/assets/kensten-logo.png';
+      if (brokerToken === 'RIYA-GOMES-001' && fs.existsSync(logoPath)) {
+        doc.image(logoPath, 430, 30, { width: 110, height: 80, fit: [110, 80] });
+      }
+    } catch(logoErr) {
+      console.warn('Logo error:', logoErr.message);
+    }
     doc.font('Bold').fontSize(18).fillColor('#1F4E5F').text('Record of Advice', { align: 'left' });
     doc.moveDown(0.3);
     doc.font('Regular').fontSize(10).fillColor('#595959')
