@@ -170,7 +170,25 @@ app.post('/generate-roa', async (req, res) => {
 
   try {
     if (mode === 'extract') {
+      const fileMarkerCount = (user.match(/--- FROM: /g) || []).length;
+      const inputCharCount = user.length;
       const result = await callClaude(apiKey, SYSTEM_EXTRACT, user, 4000);
+      let parsedOk = false;
+      let nonEmptyFieldCount = 0;
+      let totalFieldCount = 0;
+      try {
+        const clean = result.replace(/```json|```/g, '').trim();
+        const parsed = JSON.parse(clean);
+        parsedOk = true;
+        totalFieldCount = Object.keys(parsed).length;
+        nonEmptyFieldCount = Object.values(parsed).filter(v => {
+          if (Array.isArray(v)) return v.length > 0;
+          return v !== '' && v !== null && v !== undefined;
+        }).length;
+      } catch (e) {
+        parsedOk = false;
+      }
+      console.log('EXTRACT metrics: token=' + (token || 'unknown') + ' documentsDetected=' + (fileMarkerCount || 1) + ' inputChars=' + inputCharCount + ' jsonParsedOk=' + parsedOk + ' fieldsPopulated=' + nonEmptyFieldCount + '/' + totalFieldCount);
       return res.json({ content: [{ type: 'text', text: result }] });
     }
 
