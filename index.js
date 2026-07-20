@@ -590,4 +590,66 @@ return res.status(500).json({ error: err.message });
 }
 });
 
+app.post('/save-draft', async (req, res) => {
+  const { token, draftId, clientLabel, formData } = req.body;
+  if (!token) return res.status(401).json({ error: 'No token provided.' });
+  if (!clientLabel || !formData) return res.status(400).json({ error: 'clientLabel and formData are required.' });
+  try {
+    if (draftId) {
+      const updated = await supabaseRequest('PATCH', 'roa_drafts?id=eq.' + encodeURIComponent(draftId) + '&broker_token=eq.' + encodeURIComponent(token), {
+        client_label: clientLabel,
+        form_data: formData,
+        updated_at: new Date().toISOString()
+      });
+      return res.json({ success: true, id: draftId });
+    } else {
+      const created = await supabaseRequest('POST', 'roa_drafts', {
+        broker_token: token,
+        client_label: clientLabel,
+        form_data: formData
+      });
+      const newId = created && created[0] && created[0].id;
+      return res.json({ success: true, id: newId });
+    }
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/list-drafts', async (req, res) => {
+  const { token } = req.query;
+  if (!token) return res.status(400).json({ error: 'Token required.' });
+  try {
+    const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    await supabaseRequest('DELETE', 'roa_drafts?broker_token=eq.' + encodeURIComponent(token) + '&updated_at=lt.' + encodeURIComponent(cutoff));
+    const drafts = await supabaseRequest('GET', 'roa_drafts?broker_token=eq.' + encodeURIComponent(token) + '&select=id,client_label,updated_at&order=updated_at.desc');
+    return res.json({ drafts: drafts || [] });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.get('/load-draft', async (req, res) => {
+  const { token, id } = req.query;
+  if (!token || !id) return res.status(400).json({ error: 'Token and id required.' });
+  try {
+    const result = await supabaseRequest('GET', 'roa_drafts?id=eq.' + encodeURIComponent(id) + '&broker_token=eq.' + encodeURIComponent(token) + '&select=*');
+    if (!result || !result.length) return res.status(404).json({ error: 'Draft not found.' });
+    return res.json({ draft: result[0] });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
+app.delete('/delete-draft', async (req, res) => {
+  const { token, id } = req.query;
+  if (!token || !id) return res.status(400).json({ error: 'Token and id required.' });
+  try {
+    await supabaseRequest('DELETE', 'roa_drafts?id=eq.' + encodeURIComponent(id) + '&broker_token=eq.' + encodeURIComponent(token));
+    return res.json({ success: true });
+  } catch(e) {
+    return res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(PORT, () => console.log('Riya backend listening on port ' + PORT));
