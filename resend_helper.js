@@ -3,7 +3,7 @@ const {
   Document, Packer, Paragraph, TextRun, 
   AlignmentType, BorderStyle,
   ShadingType, ImageRun
-} = require('docx');
+  } = require('docx');
 
 function getResend() {
   return new Resend(process.env.RESEND_API_KEY);
@@ -63,7 +63,8 @@ function buildWordDoc(clientName, brokerName, roaContent, brokerToken) {
       'RIYA-GOMES-001': { file: 'kensten-logo.png', width: 110, height: 80 },
       'RIYA-MARX-001': { file: '1st-insurance-logo.png', width: 150, height: 50 },
       'RIYA-CRAFFORD-0001': { file: 'twk-logo.png', width: 80, height: 80 },
-      'RIYA-GROBLER-001': { file: 'galinco-logo.png', width: 140, height: 47 }
+      'RIYA-GROBLER-001': { file: 'galinco-logo.png', width: 140, height: 47 },
+      'RIYA-TWK-001': { file: 'twk-logo.png', width: 80, height: 80 }
     };  
     const logoConfig = logoMap[brokerToken];
     if (logoConfig) {
