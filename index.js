@@ -307,13 +307,12 @@ app.post('/transcribe-voice', multerUpload.single('audio'), async (req, res) => 
 });
 
 app.post('/generate-pdf', async (req, res) => {
-  const { text, clientName, fspName, triggerLabel, adviceDate } = req.body;
+  const { text, clientName, fspName, triggerLabel, adviceDate, brokerToken } = req.body;
   if (!text) return res.status(400).json({ error: 'No text provided' });
 
   try {
     const NAVY = '#1F3B6E';
     const GOLD = '#D4A574';
-    const LIGHT_GRAY = '#F5F5F5';
 
     const doc = new PDFDocument({ margin: 45, size: 'A4' });
     const chunks = [];
@@ -330,93 +329,104 @@ app.post('/generate-pdf', async (req, res) => {
     const marginRight = 45;
     const contentWidth = pageWidth - marginLeft - marginRight;
 
-    // ===== HEADER =====
-    doc.rect(marginLeft - 45, 0, pageWidth, 80).fill(NAVY);
-    doc.fontSize(24).font('Helvetica-Bold').fillColor('#FFFFFF').text('RECORD OF ADVICE', 0, 18, { align: 'center' });
-    doc.fontSize(10).font('Helvetica').fillColor(GOLD).text('FAIS & GCoC Compliant  |  ' + (adviceDate || new Date().toLocaleDateString('en-ZA')), 0, 48, { align: 'center' });
+    doc.rect(0, 0, pageWidth, 80).fill(NAVY);
+    doc.fontSize(22).font('Helvetica-Bold').fillColor('#FFFFFF').text('RECORD OF ADVICE', 0, 18, { align: 'center' });
+    doc.fontSize(10).font('Helvetica').fillColor(GOLD).text(
+      'FAIS & GCoC Compliant  |  ' + (adviceDate || new Date().toLocaleDateString('en-ZA')),
+      0, 48, { align: 'center' }
+    );
+
+    try {
+      const logoMap = {
+        'RIYA-GOMES-001': { file: 'kensten-logo.png', width: 90, height: 45 },
+        'RIYA-MARX-001': { file: '1st-insurance-logo.png', width: 100, height: 40 },
+        'RIYA-CRAFFORD-0001': { file: 'twk-logo.png', width: 60, height: 60 },
+        'RIYA-GROBLER-001': { file: 'galinco-logo.png', width: 110, height: 38 },
+        'RIYA-TWK-001': { file: 'twk-logo.png', width: 60, height: 60 },
+        'RIYA-APBCO-001': { file: 'apbco-logo.jpg', width: 90, height: 45 }
+      };
+      const logoConfig = logoMap[brokerToken];
+      if (logoConfig) {
+        const logoPath = __dirname + '/assets/' + logoConfig.file;
+        if (fs.existsSync(logoPath)) {
+          doc.image(logoPath, pageWidth - marginRight - logoConfig.width, 90, {
+            width: logoConfig.width, height: logoConfig.height, fit: [logoConfig.width, logoConfig.height]
+          });
+        }
+      }
+    } catch (logoErr) {
+      console.warn('Logo error:', logoErr.message);
+    }
 
     doc.y = 95;
 
-    // ===== PARSE SECTIONS =====
+    const normalized = text
+      .split('\n')
+      .map(l => l.replace(/^\s+/, '').replace(/^#{1,3}\s*/, ''))
+      .join('\n');
+
     const sections = [];
-    const sectionRegex = /^\d+\.\s+([A-Z][^\n]*)/gm;
+    const sectionRegex = /(?:^|\n)(\d{1,2})\.\s+([A-Z][^\n]{2,80})/g;
     let match;
-    let lastIndex = 0;
-
-    while ((match = sectionRegex.exec(text)) !== null) {
-      if (lastIndex > 0) {
-        sections[sections.length - 1].content = text.substring(sections[sections.length - 1].startIndex, match.index).trim();
-      }
-      sections.push({
-        title: match[1],
-        number: match[0].split('.')[0],
-        startIndex: match.index
+    const matches = [];
+    while ((match = sectionRegex.exec(normalized)) !== null) {
+      matches.push({
+        number: match[1],
+        title: match[2].trim(),
+        index: match.index + (match[0].startsWith('\n') ? 1 : 0)
       });
-      lastIndex = match.index;
     }
-    if (sections.length > 0) {
-      sections[sections.length - 1].content = text.substring(sections[sections.length - 1].startIndex).trim();
+    for (let i = 0; i < matches.length; i++) {
+      const start = matches[i].index;
+      const end = i + 1 < matches.length ? matches[i + 1].index : normalized.length;
+      const headingLine = normalized.slice(start, end).split('\n')[0];
+      const content = normalized.slice(start + headingLine.length, end).trim();
+      sections.push({ number: matches[i].number, title: matches[i].title, content });
     }
 
-    // ===== RENDER SECTIONS =====
-    for (let i = 0; i < sections.length; i++) {
-      const section = sections[i];
+    if (sections.length === 0) {
+      doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(normalized, marginLeft, doc.y, { width: contentWidth });
+    }
 
-      // Page break if near bottom
-      if (doc.y > doc.page.height - 100) {
-        doc.addPage();
-        doc.y = 45;
-      }
+    for (const section of sections) {
+      if (doc.y > doc.page.height - 100) { doc.addPage(); doc.y = 45; }
 
-      // Section header with background
       const headerY = doc.y;
-      doc.rect(marginLeft - 45, headerY, pageWidth, 28).fill(NAVY);
-      doc.fontSize(12).font('Helvetica-Bold').fillColor(GOLD).text(
+      doc.rect(0, headerY, pageWidth, 26).fill(NAVY);
+      doc.fontSize(11).font('Helvetica-Bold').fillColor(GOLD).text(
         '  ' + section.number + '. ' + section.title.toUpperCase(),
-        marginLeft, headerY + 8, { width: contentWidth, height: 20 }
+        marginLeft, headerY + 7, { width: contentWidth }
       );
+      doc.y = headerY + 34;
 
-      doc.y = headerY + 35;
-
-      // Section content
       const lines = section.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-
       for (const line of lines) {
-        if (doc.y > doc.page.height - 60) {
-          doc.addPage();
-          doc.y = 45;
-        }
-
-        const isBullet = line.match(/^[•\-\*]\s+/);
-        const isSubHeading = line.match(/^[A-Z][A-Za-z\s&/()-]*:\s*$/) && line.length < 70;
+        if (doc.y > doc.page.height - 60) { doc.addPage(); doc.y = 45; }
+        const isBullet = /^[•\-\*]\s+/.test(line);
+        const isSubHeading = /^[A-Z][A-Za-z\s&/()-]*:\s*$/.test(line) && line.length < 70;
 
         if (isSubHeading) {
           doc.moveDown(0.3);
           doc.fontSize(10).font('Helvetica-Bold').fillColor(NAVY).text(line, marginLeft, doc.y, { width: contentWidth });
-          doc.moveDown(0.3);
+          doc.moveDown(0.2);
         } else if (isBullet) {
           doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(line, marginLeft + 12, doc.y, { width: contentWidth - 12 });
-          doc.moveDown(0.4);
+          doc.moveDown(0.3);
         } else {
           doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(line, marginLeft, doc.y, { width: contentWidth });
-          doc.moveDown(0.4);
+          doc.moveDown(0.3);
         }
       }
-
-      doc.moveDown(0.8);
+      doc.moveDown(0.7);
     }
 
-    // ===== FOOTER =====
-    if (doc.y > doc.page.height - 60) {
-      doc.addPage();
-    }
-
+    if (doc.y > doc.page.height - 60) doc.addPage();
     doc.moveDown(1);
     const footerY = doc.y;
-    doc.rect(marginLeft - 45, footerY, pageWidth, 35).fill(NAVY);
+    doc.rect(0, footerY, pageWidth, 30).fill(NAVY);
     doc.fontSize(7.5).font('Helvetica').fillColor(GOLD).text(
       'Generated by Riya  |  Africa Bloom (Pty) Ltd  |  FAIS Act 37/2002  |  BN 80/2003  |  GN 706/2020  |  5-year retention required',
-      marginLeft, footerY + 12, { align: 'center', width: contentWidth }
+      marginLeft, footerY + 10, { align: 'center', width: contentWidth }
     );
 
     doc.end();
