@@ -168,10 +168,11 @@ async function validateBrokerToken(token) {
   return result[0];
 }
 
-async function deductCredit(token, roaType, broker) {
+async function deductCredit(token, roaType, broker, creditCost) {
+  const cost = creditCost || 1;
   await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
-    credits: broker.credits - 1,
-    credits_used: broker.credits_used + 1,
+    credits: broker.credits - cost,
+    credits_used: broker.credits_used + cost,
     last_used: new Date().toISOString()
   });
   await supabaseRequest('POST', 'usage_log', {
@@ -189,11 +190,20 @@ app.post('/generate-roa', async (req, res) => {
   if (!token) return res.status(401).json({ error: 'No token provided.' });
 
   let broker = null;
+  let roaType = 'personal';
+  let creditCost = 2;
+  if (mode !== 'extract' && user) {
+    roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
+    creditCost = roaType === 'commercial' ? 3 : 2;
+  }
   if (token !== masterToken) {
     broker = await validateBrokerToken(token);
     if (!broker) return res.status(401).json({ error: 'Invalid token.' });
     if (broker.status !== 'active') return res.status(403).json({ error: 'Account suspended. Contact support.' });
     if (broker.credits <= 0) return res.status(403).json({ error: 'No credits remaining. Please top up to continue.' });
+    if (mode !== 'extract' && broker.credits < creditCost) {
+      return res.status(403).json({ error: 'Insufficient credits for this RoA type (' + creditCost + ' credits required, ' + broker.credits + ' remaining). Please top up to continue.' });
+    }
   }
 
   if (!apiKey) return res.status(500).json({ error: 'Server configuration error.' });
@@ -271,8 +281,6 @@ app.post('/generate-roa', async (req, res) => {
     } catch(e) { warnings = []; }
 
     if (broker) {
-      const roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
-      const creditCost = roaType === 'commercial' ? 3 : 2;
       await deductCredit(token, roaType, broker, creditCost);
     }
 
