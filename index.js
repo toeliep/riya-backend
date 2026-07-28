@@ -8,13 +8,16 @@ const multerUpload = require('multer')({
   limits: { fileSize: 25 * 1024 * 1024 }
 });
 
-function transcribeWithElevenLabs(fileBuffer, filename, mimetype) {
+function transcribeWithElevenLabs(fileBuffer, filename, mimetype, languageCode) {
   return new Promise((resolve, reject) => {
     const apiKey = process.env.ELEVENLABS_API_KEY;
     if (!apiKey) return reject(new Error('ELEVENLABS_API_KEY not configured on server'));
     const boundary = '----RiyaVoiceBoundary' + Date.now();
     const parts = [];
     parts.push(Buffer.from('--' + boundary + '\r\nContent-Disposition: form-data; name="model_id"\r\n\r\nscribe_v2\r\n'));
+    if (languageCode) {
+      parts.push(Buffer.from('--' + boundary + '\r\nContent-Disposition: form-data; name="language_code"\r\n\r\n' + languageCode + '\r\n'));
+    }
     parts.push(Buffer.from('--' + boundary + '\r\nContent-Disposition: form-data; name="file"; filename="' + filename + '"\r\nContent-Type: ' + (mimetype || 'application/octet-stream') + '\r\n\r\n'));
     parts.push(fileBuffer);
     parts.push(Buffer.from('\r\n--' + boundary + '--\r\n'));
@@ -358,7 +361,8 @@ app.post('/transcribe-voice', multerUpload.single('audio'), async (req, res) => 
   }
 
   try {
-    const transcript = await transcribeWithElevenLabs(req.file.buffer, req.file.originalname, req.file.mimetype);
+    const languageCode = req.body && req.body.language ? req.body.language : null;
+    const transcript = await transcribeWithElevenLabs(req.file.buffer, req.file.originalname, req.file.mimetype, languageCode);
 
     if (!transcript || !transcript.trim()) {
       return res.status(422).json({ error: 'No speech detected in the audio file. Please check the recording and try again.' });
