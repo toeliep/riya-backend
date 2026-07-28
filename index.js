@@ -96,6 +96,10 @@ const SYSTEM_EXTRACT = "You are a South African FAIS insurance compliance assist
 
 const SYSTEM_SUFFICIENCY = "You are a South African FAIS insurance compliance assistant checking whether a broker input contains enough information to produce a defensible Record of Advice. You will be given the broker raw input text, the Trigger Event, and the Lines of Business. Return ONLY a valid raw JSON array of short strings, no preamble, no markdown, no backticks. Each string describes ONE specific missing piece of essential information. If everything essential is present, return exactly []. NEW POLICY needs client identity, one concrete asset with detail, one insurer and premium. Flag but do not invent: a market comparison if only one insurer is mentioned; KYC confirmations if not stated; for Commercial, turnover and Gross Profit if Business Interruption is mentioned with no financials; liability limits if a liability type is mentioned with no limit. PERSONAL LINES RULES — do NOT flag any of the following as missing: income, occupation, employment status, or dependents (not required for standard personal lines RoA); premium breakdown per cover section (a single all-in premium is acceptable); confirmation that sum insured amounts are agreed vs estimated when specific rand values are clearly stated in the notes; general needs analysis documentation when assets and cover requirements are clearly described. For personal lines, limit flags to genuine FAIS gaps only: missing KYC if not mentioned, missing market comparison if only one insurer quoted on new business, missing replacement advice confirmation if switching insurers, missing excess structure if no excess mentioned at all. RENEWAL needs an existing policy reference and a premium figure. CRITICAL: only expect a market comparison if the input explicitly says the client was re-marketed to other insurers. If the input only describes the existing insurer renewal with no competing quotes, do NOT flag the absence of a market comparison, this is correct expected behaviour. Flag what has changed since last period if nothing is mentioned. AMENDMENT needs an existing policy reference and a description of the change. Never flag missing market comparison for an amendment. If the change involves moving to a different insurer, flag this as possibly a Policy Replacement needing fuller documentation. TELEPHONE ADVICE needs a date and a description of what was discussed and advised. Do not flag missing needs analysis or market comparison unless the call covered that ground, these records are expected to be short. If Renewal has no policy reference at all, do not refuse, still generate with the gap flagged prominently.";
 
+const SYSTEM_ROA_AUDIT = "You are Riya, a South African FAIS compliance auditor. You will be given a Record of Advice document that a broker has ALREADY WRITTEN THEMSELVES. Your job is ONLY to review it for FAIS Act 37 of 2002, Board Notice 80 of 2003, and General Notice 706 of 2020 compliance gaps. You do NOT rewrite, redraft, or generate a new RoA. You do NOT invent facts, insurer names, or figures that are not in the document. STEP 1 - DETECT THE TRIGGER EVENT: read the document and determine which ONE of these four trigger events it represents: New Policy, Renewal, Amendment, or Telephone Advice. Base this on explicit content - e.g. an existing policy number and prior premium being renewed means Renewal; a described change to existing cover means Amendment; a phone consultation record with no new placement means Telephone Advice; otherwise New Policy. STEP 2 - CHECK AGAINST THE REQUIREMENTS FOR THAT SPECIFIC TRIGGER, not a generic one-size-fits-all checklist: NEW POLICY requires all of: FSP/representative details with PI insurance confirmation; client identification and KYC/FICA/POPIA; a genuine needs analysis; a market comparison across insurers (or an explicit reason none was needed); full Section 9(1) product detail; remuneration and conflict of interest declaration; replacement advice section if switching from an existing insurer; client acceptance record with signature. RENEWAL requires: the existing policy reference and current premium; what has changed since last period (or confirmation nothing changed); a market comparison ONLY IF the document says the client was re-marketed to other insurers - do NOT flag a missing market comparison for a straightforward renewal with no re-marketing mentioned; remuneration/conflict of interest; client acceptance record. AMENDMENT requires: the existing policy reference; a clear description of the change and the reason for it; remuneration/conflict of interest if commission is affected; client acceptance record. Do NOT flag a missing market comparison for an amendment. If the amendment involves moving to a different insurer, flag this as needing full Replacement Advice treatment. TELEPHONE ADVICE requires: the date and a substantive description of what was discussed and advised; any follow-up action noted; client acceptance/confirmation record (this can be an email or verbal confirmation noted, not necessarily a signature). Do NOT flag missing needs analysis or market comparison for Telephone Advice unless the call itself covered that ground - these records are expected to be short. Return ONLY a valid raw JSON object, no preamble, no markdown, no backticks, with this exact structure: {\"detectedTrigger\": \"one of: New Policy, Renewal, Amendment, Telephone Advice\", \"overallAssessment\": \"one short sentence summarizing compliance posture\", \"sectionsFound\": [\"array of section names/topics the document DOES appear to cover\"], \"gaps\": [\"array of specific missing or unclear compliance elements relevant to the detected trigger type, each phrased factually starting with the section it relates to, e.g. FSP Details: Professional Indemnity Insurance confirmation not stated\"], \"riskFlags\": [\"array of higher-severity issues - a MATERIAL compliance risk such as no conflict of interest declaration at all, no client signature/acceptance record, no commission/remuneration disclosure, or a replacement scenario described with no formal replacement advice section\"]}. Be precise and evidence-based - only flag something as a gap if it is genuinely absent or unclear from the text provided, and only if it is actually required for the detected trigger type. Never assume something is missing just because it is phrased briefly. If the document is thorough and compliant for its trigger type, gaps and riskFlags should be short or empty arrays, not padded to seem more useful than they are.";
+const SYSTEM_ROA_AUDIT_REWRITE = "You are Riya, a South African FAIS compliance assistant. A broker has provided the TRIGGER EVENT of an existing RoA (New Policy, Renewal, Amendment, or Telephone Advice), the RoA they originally wrote themselves, and corrections or additional information addressing specific compliance gaps that were identified in that original document. Produce a complete, corrected, FAIS-compliant Record of Advice using numbered section headings appropriate to the TRIGGER EVENT: for New Policy use all of 1. FSP and Representative Details 2. Client Identification and KYC/FICA/POPIA confirmation 3. Needs Analysis 4. Market Comparison 5. Product Recommended (full Section 9(1) detail) 6. Remuneration and Conflict of Interest 7. Replacement Advice 8. Client Acceptance Record. For Renewal, keep the same 8 sections but section 4 (Market Comparison) should state 'Not applicable - renewal with no re-marketing conducted' unless the original document or corrections describe genuine re-marketing to other insurers - do not invent a market comparison. For Amendment, keep the same 8 sections but section 3 (Needs Analysis) and section 4 (Market Comparison) should be brief, focused only on the specific change being made, with Market Comparison stating not applicable unless the amendment involves switching insurers. For Telephone Advice, keep the same 8 sections but sections 3 and 4 should be brief and focused only on what was actually discussed on the call, not a full fresh needs analysis or market comparison unless the call itself covered that ground. CRITICAL RULES: Preserve every genuine fact, figure, insurer name, and client detail already present in the ORIGINAL document exactly as given - do not alter correct information. Incorporate the broker's CORRECTIONS into the appropriate section(s) to address the gaps they were provided for. Do NOT invent, assume, or fabricate any fact, name, or figure that appears in neither the original document nor the corrections. If a previously-flagged gap was NOT addressed in the corrections provided, do not fabricate content for it - instead write a clear, honest placeholder such as 'Pending - not yet confirmed by broker' in that section, so the gap remains visibly outstanding rather than silently disappearing. Write in professional English suitable for FSCA inspection. Do NOT use markdown tables, do NOT insert '---' separator lines or '##' markdown characters anywhere in the output. End Section 8 with a signature block containing exactly these lines: 'Client Signature: _________________________', 'Client Name (print): _________________________', 'Date: _________________________', a blank line, then 'Adviser Signature: _________________________', 'Adviser Name (print): _________________________', 'Date: _________________________' - unless the original document already shows a genuine completed signature/acceptance record, in which case preserve that instead of adding blank lines.";
+
+
 function callClaude(apiKey, system, user, maxTokens) {
   return new Promise((resolve, reject) => {
     const payload = JSON.stringify({
@@ -192,7 +196,13 @@ app.post('/generate-roa', async (req, res) => {
   let broker = null;
   let roaType = 'personal';
   let creditCost = 2;
-  if (mode !== 'extract' && user) {
+  if (mode === 'audit') {
+    creditCost = 1;
+  } else if (mode === 'audit_rewrite') {
+    const combinedAuditText = (req.body.originalRoA || user || '') + (req.body.corrections || '');
+    roaType = combinedAuditText.includes('Commercial') ? 'commercial' : 'personal';
+    creditCost = roaType === 'commercial' ? 3 : 2;
+  } else if (mode !== 'extract' && mode !== 'sufficiency' && user) {
     roaType = user.includes('Commercial Lines') ? 'commercial' : 'personal';
     creditCost = roaType === 'commercial' ? 3 : 2;
   }
@@ -201,9 +211,10 @@ app.post('/generate-roa', async (req, res) => {
     if (!broker) return res.status(401).json({ error: 'Invalid token.' });
     if (broker.status !== 'active') return res.status(403).json({ error: 'Account suspended. Contact support.' });
     if (broker.credits <= 0) return res.status(403).json({ error: 'No credits remaining. Please top up to continue.' });
-    if (mode !== 'extract' && broker.credits < creditCost) {
-      return res.status(403).json({ error: 'Insufficient credits for this RoA type (' + creditCost + ' credits required, ' + broker.credits + ' remaining). Please top up to continue.' });
+    if (mode !== 'extract' && mode !== 'sufficiency' && broker.credits < creditCost) {
+      return res.status(403).json({ error: 'Insufficient credits (' + creditCost + ' credits required, ' + broker.credits + ' remaining). Please top up to continue.' });
     }
+
   }
 
   if (!apiKey) return res.status(500).json({ error: 'Server configuration error.' });
@@ -242,6 +253,43 @@ app.post('/generate-roa', async (req, res) => {
       try { gaps = JSON.parse(cleaned2); if (!Array.isArray(gaps)) gaps = []; } catch(e) { gaps = []; }
       console.log('SUFFICIENCY metrics: token=' + (token || 'unknown') + ' trigger=' + (triggerEvent || 'unknown') + ' lines=' + (linesOfBusiness || 'unknown') + ' gapCount=' + gaps.length);
       return res.json({ gaps: gaps });
+    }
+
+    if (mode === 'audit') {
+      const auditResult = await callClaude(apiKey, SYSTEM_ROA_AUDIT, 'BROKER-WRITTEN RoA TO REVIEW:\n\n' + user, 1500);
+      const cleanedAudit = auditResult.trim().replace(/^```json\s*/i, '').replace(/```\s*$/i, '');
+      let auditData = { detectedTrigger: 'New Policy', overallAssessment: '', sectionsFound: [], gaps: [], riskFlags: [] };
+      try {
+        const parsed = JSON.parse(cleanedAudit);
+        auditData = {
+          detectedTrigger: parsed.detectedTrigger || 'New Policy',
+          overallAssessment: parsed.overallAssessment || '',
+          sectionsFound: Array.isArray(parsed.sectionsFound) ? parsed.sectionsFound : [],
+          gaps: Array.isArray(parsed.gaps) ? parsed.gaps : [],
+          riskFlags: Array.isArray(parsed.riskFlags) ? parsed.riskFlags : []
+        };
+      } catch(e) { /* keep defaults on parse failure */ }
+      console.log('AUDIT metrics: token=' + (token || 'unknown') + ' trigger=' + auditData.detectedTrigger + ' gapCount=' + auditData.gaps.length + ' riskFlagCount=' + auditData.riskFlags.length);
+      if (broker) {
+        await deductCredit(token, 'audit', broker, 1);
+      }
+      return res.json(auditData);
+    }
+
+    if (mode === 'audit_rewrite') {
+      const originalRoA = req.body.originalRoA || user;
+      const corrections = req.body.corrections || '';
+      const detectedTrigger = req.body.detectedTrigger || 'New Policy';
+      const rewriteInput = 'TRIGGER EVENT: ' + detectedTrigger + '\n\nORIGINAL BROKER-WRITTEN RoA:\n\n' + originalRoA + '\n\n--- BROKER CORRECTIONS / ADDITIONAL INFORMATION FOR FLAGGED GAPS ---\n\n' + (corrections || '(No corrections provided - preserve original content and mark unaddressed gaps as pending)');
+      let rewritten = '';
+      try { rewritten = await callClaude(apiKey, SYSTEM_ROA_AUDIT_REWRITE, rewriteInput, 4000); } catch(e) { rewritten = 'Error: ' + e.message; }
+      rewritten = forceHeadingLinebreaks(rewritten);
+
+      if (broker) {
+        await deductCredit(token, roaType, broker, creditCost);
+      }
+      console.log('AUDIT_REWRITE metrics: token=' + (token || 'unknown') + ' type=' + roaType + ' outputLength=' + rewritten.length);
+      return res.json({ content: [{ type: 'text', text: rewritten }] });
     }
 
     const user1 = user + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. Be concise - bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. Do not write anything beyond section 2 - end your response immediately after completing it, with no additional text or commentary. DO NOT include any --- separator lines or ## markdown.';
