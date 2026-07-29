@@ -175,26 +175,22 @@ async function validateBrokerToken(token) {
   return result[0];
 }
 
-async function deductCredit(token, roaType, broker, creditCost, internalTest) {
+async function deductCredit(token, roaType, broker, creditCost) {
   const cost = creditCost || 1;
-  if (!internalTest) {
-    await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
-      credits: broker.credits - cost,
-      credits_used: broker.credits_used + cost,
-      last_used: new Date().toISOString()
-    });
-  }
+  await supabaseRequest('PATCH', 'brokers?token=eq.' + encodeURIComponent(token), {
+    credits: broker.credits - cost,
+    credits_used: broker.credits_used + cost,
+    last_used: new Date().toISOString()
+  });
   await supabaseRequest('POST', 'usage_log', {
     token: token,
     broker_name: broker.name,
-    roa_type: roaType || 'unknown',
-    source: internalTest ? 'internal_test' : 'broker'
+    roa_type: roaType || 'unknown'
   });
 }
 
 app.post('/generate-roa', async (req, res) => {
   const { user, mode, token } = req.body;
-  const internalTest = !!req.body.internalTest;
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const masterToken = process.env.RIYA_ACCESS_TOKEN;
 
@@ -217,8 +213,8 @@ app.post('/generate-roa', async (req, res) => {
     broker = await validateBrokerToken(token);
     if (!broker) return res.status(401).json({ error: 'Invalid token.' });
     if (broker.status !== 'active') return res.status(403).json({ error: 'Account suspended. Contact support.' });
-    if (!internalTest && broker.credits <= 0) return res.status(403).json({ error: 'No credits remaining. Please top up to continue.' });
-    if (!internalTest && mode !== 'extract' && mode !== 'sufficiency' && broker.credits < creditCost) {
+    if (broker.credits <= 0) return res.status(403).json({ error: 'No credits remaining. Please top up to continue.' });
+    if (mode !== 'extract' && mode !== 'sufficiency' && broker.credits < creditCost) {
       return res.status(403).json({ error: 'Insufficient credits (' + creditCost + ' credits required, ' + broker.credits + ' remaining). Please top up to continue.' });
     }
 
@@ -278,7 +274,7 @@ app.post('/generate-roa', async (req, res) => {
       } catch(e) { /* keep defaults on parse failure */ }
       console.log('AUDIT metrics: token=' + (token || 'unknown') + ' trigger=' + auditData.detectedTrigger + ' gapCount=' + auditData.gaps.length + ' riskFlagCount=' + auditData.riskFlags.length);
       if (broker) {
-        await deductCredit(token, 'audit', broker, 1, internalTest);
+        await deductCredit(token, 'audit', broker, 1);
       }
       return res.json(auditData);
     }
@@ -293,7 +289,7 @@ app.post('/generate-roa', async (req, res) => {
       rewritten = forceHeadingLinebreaks(rewritten);
 
       if (broker) {
-        await deductCredit(token, roaType, broker, creditCost, internalTest);
+        await deductCredit(token, roaType, broker, creditCost);
       }
       console.log('AUDIT_REWRITE metrics: token=' + (token || 'unknown') + ' type=' + roaType + ' outputLength=' + rewritten.length);
       return res.json({ content: [{ type: 'text', text: rewritten }] });
@@ -336,7 +332,7 @@ app.post('/generate-roa', async (req, res) => {
     } catch(e) { warnings = []; }
 
     if (broker) {
-      await deductCredit(token, roaType, broker, creditCost, internalTest);
+      await deductCredit(token, roaType, broker, creditCost);
     }
 
     return res.json({ content: [{ type: 'text', text: finalCombined }], warnings: warnings });
