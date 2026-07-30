@@ -470,6 +470,7 @@ app.post('/generate-pdf', async (req, res) => {
     // so indentation or leftover '#'/'##' never causes a silent zero-match.
     const normalized = repaired
       .replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-')
+      .replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-')
       .split('\n')
       .map(l => l.replace(/^\s+/, '').replace(/^#{1,3}\s*/, ''))
       .join('\n');

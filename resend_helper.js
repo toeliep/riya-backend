@@ -223,4 +223,4 @@ async function sendRoAEmail(brokerEmail, clientName, brokerName, roaContent, bro
   }
 }
 
-module.exports = { sendWelcomeEmail, sendRoAEmail };
+module.exports = { sendWelcomeEmail, sendRoAEmail, parseRoAContent };
