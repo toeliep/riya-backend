@@ -324,6 +324,7 @@ app.post('/generate-roa', async (req, res) => {
 
     const user1 = user + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. Be concise - bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. Do not write anything beyond section 2 - end your response immediately after completing it, with no additional text or commentary. DO NOT include any --- separator lines or ## markdown.';
     let part1 = '';
+const lang = req.body.language || 'en';
     const activeSystemRoa = buildSystemRoa(user, lang);
     try { part1 = await callClaude(apiKey, activeSystemRoa, user1, 2000); } catch(e) { part1 = 'Error: ' + e.message; }
     part1 = forceHeadingLinebreaks(part1);
