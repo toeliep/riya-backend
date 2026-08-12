@@ -869,37 +869,26 @@ app.delete('/delete-draft', async (req, res) => {
 // CLIENT PROFILE STORAGE ENDPOINTS
 // ============================================================
 
-// POST /save-profile
+// POST /save-profile (RoA text only)
 app.post('/save-profile', async (req, res) => {
   try {
-    const { brokerToken, clientName, clientIdNumber, formData, triggerEvent, linesType, roaId } = req.body;
-    if (!brokerToken || !clientName || !formData) return res.status(400).json({ error: 'brokerToken, clientName and formData are required.' });
-    try {
-      const brokerResult = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(brokerToken) + '&select=id,token,plan');
-      if (!brokerResult || !brokerResult.length) return res.status(403).json({ error: 'Invalid broker token.' });
-    } catch (err) {
-      return res.status(403).json({ error: 'Invalid broker token.' });
+    const { brokerToken, clientName, triggerEvent, roaText, roaId, adviceDate } = req.body;
+    if (!brokerToken || !clientName || !triggerEvent || !roaText) return res.status(400).json({ error: 'brokerToken, clientName, triggerEvent and roaText are required.' });
+    try { const b = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(brokerToken) + '&select=id'); if (!b || !b.length) return res.status(403).json({ error: 'Invalid broker token.' }); } catch(e) { return res.status(403).json({ error: 'Invalid broker token.' }); }
+    const ev = { event_id: require('crypto').randomUUID(), event_type: triggerEvent, event_date: adviceDate || new Date().toISOString(), roa_text: roaText, roa_id: roaId || null };
+    const now = new Date().toISOString(); const exp = new Date(Date.now() + 5*365.25*24*60*60*1000).toISOString();
+    const ex = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
+    if (ex && ex.length > 0) {
+      const upd = [...(ex[0].events || []), ev];
+      await supabaseRequest('PATCH', 'client_profiles?id=eq.' + encodeURIComponent(ex[0].id), { events: upd, last_activity_date: now, expires_at: exp, updated_at: now });
+      return res.json({ success: true, action: 'updated', message: triggerEvent + ' RoA saved for ' + clientName, event_count: upd.length });
+    } else {
+      await supabaseRequest('POST', 'client_profiles', { broker_token: brokerToken, client_name: clientName, client_id_number: null, events: [ev], last_activity_date: now, expires_at: exp, is_archived: false, created_at: now, updated_at: now });
+      return res.json({ success: true, action: 'created', message: 'New profile created for ' + clientName, event_count: 1 });
     }
-    const newEvent = { event_id: require('crypto').randomUUID(), event_type: triggerEvent || 'Unknown', lines_type: linesType || 'Unknown', event_date: new Date().toISOString(), form_data: formData, roa_id: roaId || null };
-    const now = new Date().toISOString();
-    const expiresAt = new Date(Date.now() + 5 * 365.25 * 24 * 60 * 60 * 1000).toISOString();
-    try {
-      const existing = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
-      if (existing && existing.length > 0) {
-        const profile = existing[0];
-        const updatedEvents = [...(profile.events || []), newEvent];
-        await supabaseRequest('PATCH', 'client_profiles?id=eq.' + encodeURIComponent(profile.id), { events: updatedEvents, client_id_number: clientIdNumber || null, last_activity_date: now, expires_at: expiresAt, updated_at: now });
-        return res.json({ success: true, action: 'updated', message: 'Event appended to existing profile for ' + clientName + '.', event_count: updatedEvents.length });
-      } else {
-        await supabaseRequest('POST', 'client_profiles', { broker_token: brokerToken, client_name: clientName, client_id_number: clientIdNumber || null, events: [newEvent], last_activity_date: now, expires_at: expiresAt, is_archived: false, created_at: now, updated_at: now });
-        return res.json({ success: true, action: 'created', message: 'New profile created for ' + clientName + '.', event_count: 1 });
-      }
-    } catch (err) { throw err; }
-  } catch (err) {
-    console.error('save-profile error:', err);
-    res.status(500).json({ error: 'Failed to save profile.', detail: err.message });
-  }
+  } catch (err) { console.error('save-profile error:', err); res.status(500).json({ error: 'Failed to save profile.', detail: err.message }); }
 });
+
 app.get('/load-profile', async (req, res) => {
   try {
     const { brokerToken, clientName } = req.query;
