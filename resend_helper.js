@@ -111,7 +111,7 @@ function buildWordDoc(clientName, brokerName, roaContent, brokerToken) {
       'RIYA-CRAFFORD-0001': { file: 'twk-logo.png', width: 80, height: 80 },
       'RIYA-GROBLER-001': { file: 'galinco-logo.png', width: 140, height: 47 },
       'RIYA-TWK-001': { file: 'twk-logo.png', width: 80, height: 80 }, 'RIYA-APBCO-001': { file: 'apbco-logo.jpg', width: 120, height: 60 },
-      'RIYA-BUXMAN-001': { file: 'sa-trust-logo.png', width: 150, height: 43 }
+      'RIYA-BUXMAN-001': { file: 'million-bux-logo.png', width: 120, height: 44 }
     };  
     const logoConfig = logoMap[brokerToken];
     if (logoConfig) {
