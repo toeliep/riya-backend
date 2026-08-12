@@ -870,269 +870,87 @@ app.delete('/delete-draft', async (req, res) => {
 // ============================================================
 
 // POST /save-profile
-// Saves extracted form_data to client profile, appending a new event
 app.post('/save-profile', async (req, res) => {
   try {
     const { brokerToken, clientName, clientIdNumber, formData, triggerEvent, linesType, roaId } = req.body;
-
-    if (!brokerToken || !clientName || !formData) {
-      return res.status(400).json({ error: 'brokerToken, clientName and formData are required.' });
-    }
-
-    // Verify broker token exists
-    const { data: broker, error: brokerErr } = await supabase
-      .from('brokers')
-      .select('id, token, plan')
-      .eq('token', brokerToken)
-      .single();
-
-    if (brokerErr || !broker) {
+    if (!brokerToken || !clientName || !formData) return res.status(400).json({ error: 'brokerToken, clientName and formData are required.' });
+    try {
+      const brokerResult = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(brokerToken) + '&select=id,token,plan');
+      if (!brokerResult || !brokerResult.length) return res.status(403).json({ error: 'Invalid broker token.' });
+    } catch (err) {
       return res.status(403).json({ error: 'Invalid broker token.' });
     }
-
-    // Build new event entry
-    const newEvent = {
-      event_id: crypto.randomUUID(),
-      event_type: triggerEvent || 'Unknown',
-      lines_type: linesType || 'Unknown',
-      event_date: new Date().toISOString(),
-      form_data: formData,
-      roa_id: roaId || null
-    };
-
+    const newEvent = { event_id: require('crypto').randomUUID(), event_type: triggerEvent || 'Unknown', lines_type: linesType || 'Unknown', event_date: new Date().toISOString(), form_data: formData, roa_id: roaId || null };
     const now = new Date().toISOString();
     const expiresAt = new Date(Date.now() + 5 * 365.25 * 24 * 60 * 60 * 1000).toISOString();
-
-    // Check if profile already exists for this broker + client name
-    const { data: existing, error: fetchErr } = await supabase
-      .from('client_profiles')
-      .select('id, events')
-      .eq('broker_token', brokerToken)
-      .eq('client_name', clientName)
-      .single();
-
-    if (existing) {
-      // Profile exists — append new event, reset expiry clock
-      const updatedEvents = [...(existing.events || []), newEvent];
-
-      const { error: updateErr } = await supabase
-        .from('client_profiles')
-        .update({
-          events: updatedEvents,
-          client_id_number: clientIdNumber || null,
-          last_activity_date: now,
-          expires_at: expiresAt,
-          updated_at: now
-        })
-        .eq('id', existing.id);
-
-      if (updateErr) throw updateErr;
-
-      return res.json({
-        success: true,
-        action: 'updated',
-        message: `Event appended to existing profile for ${clientName}.`,
-        event_count: updatedEvents.length
-      });
-
-    } else {
-      // New profile — create with first event
-      const { error: insertErr } = await supabase
-        .from('client_profiles')
-        .insert({
-          broker_token: brokerToken,
-          client_name: clientName,
-          client_id_number: clientIdNumber || null,
-          events: [newEvent],
-          last_activity_date: now,
-          expires_at: expiresAt,
-          is_archived: false,
-          created_at: now,
-          updated_at: now
-        });
-
-      if (insertErr) throw insertErr;
-
-      return res.json({
-        success: true,
-        action: 'created',
-        message: `New profile created for ${clientName}.`,
-        event_count: 1
-      });
-    }
-
+    try {
+      const existing = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
+      if (existing && existing.length > 0) {
+        const profile = existing[0];
+        const updatedEvents = [...(profile.events || []), newEvent];
+        await supabaseRequest('PATCH', 'client_profiles?id=eq.' + encodeURIComponent(profile.id), { events: updatedEvents, client_id_number: clientIdNumber || null, last_activity_date: now, expires_at: expiresAt, updated_at: now });
+        return res.json({ success: true, action: 'updated', message: 'Event appended to existing profile for ' + clientName + '.', event_count: updatedEvents.length });
+      } else {
+        await supabaseRequest('POST', 'client_profiles', { broker_token: brokerToken, client_name: clientName, client_id_number: clientIdNumber || null, events: [newEvent], last_activity_date: now, expires_at: expiresAt, is_archived: false, created_at: now, updated_at: now });
+        return res.json({ success: true, action: 'created', message: 'New profile created for ' + clientName + '.', event_count: 1 });
+      }
+    } catch (err) { throw err; }
   } catch (err) {
     console.error('save-profile error:', err);
     res.status(500).json({ error: 'Failed to save profile.', detail: err.message });
   }
 });
-
-
-// GET /load-profile
-// Retrieves a single client profile with full event history
 app.get('/load-profile', async (req, res) => {
   try {
     const { brokerToken, clientName } = req.query;
-
-    if (!brokerToken || !clientName) {
-      return res.status(400).json({ error: 'brokerToken and clientName are required.' });
-    }
-
-    const { data: profile, error } = await supabase
-      .from('client_profiles')
-      .select('*')
-      .eq('broker_token', brokerToken)
-      .eq('client_name', clientName)
-      .single();
-
-    if (error || !profile) {
-      return res.status(404).json({ error: `No profile found for ${clientName}.` });
-    }
-
-    // Sort events newest first
-    const sortedEvents = (profile.events || []).sort(
-      (a, b) => new Date(b.event_date) - new Date(a.event_date)
-    );
-
-    return res.json({
-      success: true,
-      profile: {
-        id: profile.id,
-        client_name: profile.client_name,
-        client_id_number: profile.client_id_number,
-        created_at: profile.created_at,
-        last_activity_date: profile.last_activity_date,
-        expires_at: profile.expires_at,
-        is_archived: profile.is_archived,
-        event_count: sortedEvents.length,
-        events: sortedEvents,
-        // Most recent form_data for pre-filling
-        latest_form_data: sortedEvents.length > 0 ? sortedEvents[0].form_data : null
-      }
-    });
-
+    if (!brokerToken || !clientName) return res.status(400).json({ error: 'brokerToken and clientName are required.' });
+    const profile = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
+    if (!profile || !profile.length) return res.status(404).json({ error: 'No profile found for ' + clientName + '.' });
+    const p = profile[0];
+    const sortedEvents = (p.events || []).sort((a, b) => new Date(b.event_date) - new Date(a.event_date));
+    return res.json({ success: true, profile: { id: p.id, client_name: p.client_name, client_id_number: p.client_id_number, created_at: p.created_at, last_activity_date: p.last_activity_date, expires_at: p.expires_at, is_archived: p.is_archived, event_count: sortedEvents.length, events: sortedEvents, latest_form_data: sortedEvents.length > 0 ? sortedEvents[0].form_data : null } });
   } catch (err) {
     console.error('load-profile error:', err);
     res.status(500).json({ error: 'Failed to load profile.', detail: err.message });
   }
 });
-
-
-// GET /list-profiles
-// Lists all client profiles for a broker (summary only, no full event history)
 app.get('/list-profiles', async (req, res) => {
   try {
     const { brokerToken } = req.query;
-
-    if (!brokerToken) {
-      return res.status(400).json({ error: 'brokerToken is required.' });
-    }
-
-    const { data: profiles, error } = await supabase
-      .from('client_profiles')
-      .select('id, client_name, client_id_number, last_activity_date, expires_at, is_archived, created_at, events')
-      .eq('broker_token', brokerToken)
-      .eq('is_archived', false)
-      .order('last_activity_date', { ascending: false });
-
-    if (error) throw error;
-
-    // Return summaries (event count + latest trigger type, not full event data)
+    if (!brokerToken) return res.status(400).json({ error: 'brokerToken is required.' });
+    const profiles = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&is_archived=eq.false&order=last_activity_date.desc');
     const summaries = (profiles || []).map(p => {
       const events = p.events || [];
       const latest = events.sort((a, b) => new Date(b.event_date) - new Date(a.event_date))[0];
-      const daysToExpiry = Math.ceil(
-        (new Date(p.expires_at) - new Date()) / (1000 * 60 * 60 * 24)
-      );
-      return {
-        id: p.id,
-        client_name: p.client_name,
-        client_id_number: p.client_id_number,
-        event_count: events.length,
-        last_trigger: latest ? latest.event_type : null,
-        last_lines_type: latest ? latest.lines_type : null,
-        last_activity_date: p.last_activity_date,
-        expires_at: p.expires_at,
-        days_to_expiry: daysToExpiry,
-        expiry_warning: daysToExpiry <= 30,
-        created_at: p.created_at
-      };
+      const daysToExpiry = Math.ceil((new Date(p.expires_at) - new Date()) / (1000 * 60 * 60 * 24));
+      return { id: p.id, client_name: p.client_name, client_id_number: p.client_id_number, event_count: events.length, last_trigger: latest ? latest.event_type : null, last_lines_type: latest ? latest.lines_type : null, last_activity_date: p.last_activity_date, expires_at: p.expires_at, days_to_expiry: daysToExpiry, expiry_warning: daysToExpiry <= 30, created_at: p.created_at };
     });
-
-    return res.json({
-      success: true,
-      total: summaries.length,
-      profiles: summaries
-    });
-
+    return res.json({ success: true, total: summaries.length, profiles: summaries });
   } catch (err) {
     console.error('list-profiles error:', err);
     res.status(500).json({ error: 'Failed to list profiles.', detail: err.message });
   }
 });
-
-
-// DELETE /delete-profile
-// Soft-deletes (archives) a client profile — data retained for compliance
 app.delete('/delete-profile', async (req, res) => {
   try {
     const { brokerToken, clientName, hardDelete } = req.body;
-
-    if (!brokerToken || !clientName) {
-      return res.status(400).json({ error: 'brokerToken and clientName are required.' });
-    }
-
-    // Verify the profile belongs to this broker
-    const { data: profile, error: fetchErr } = await supabase
-      .from('client_profiles')
-      .select('id')
-      .eq('broker_token', brokerToken)
-      .eq('client_name', clientName)
-      .single();
-
-    if (fetchErr || !profile) {
-      return res.status(404).json({ error: `No profile found for ${clientName}.` });
-    }
-
+    if (!brokerToken || !clientName) return res.status(400).json({ error: 'brokerToken and clientName are required.' });
+    const profile = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
+    if (!profile || !profile.length) return res.status(404).json({ error: 'No profile found for ' + clientName + '.' });
+    const p = profile[0];
     if (hardDelete === true) {
-      // Permanent delete (broker explicitly requested)
-      const { error: delErr } = await supabase
-        .from('client_profiles')
-        .delete()
-        .eq('id', profile.id);
-
-      if (delErr) throw delErr;
-
-      return res.json({
-        success: true,
-        action: 'deleted',
-        message: `Profile for ${clientName} permanently deleted.`
-      });
-
+      await supabaseRequest('DELETE', 'client_profiles?id=eq.' + encodeURIComponent(p.id));
+      return res.json({ success: true, action: 'deleted', message: 'Profile for ' + clientName + ' permanently deleted.' });
     } else {
-      // Soft delete — archive only (default)
-      const { error: archiveErr } = await supabase
-        .from('client_profiles')
-        .update({ is_archived: true, updated_at: new Date().toISOString() })
-        .eq('id', profile.id);
-
-      if (archiveErr) throw archiveErr;
-
-      return res.json({
-        success: true,
-        action: 'archived',
-        message: `Profile for ${clientName} archived. Data retained for compliance.`
-      });
+      await supabaseRequest('PATCH', 'client_profiles?id=eq.' + encodeURIComponent(p.id), { is_archived: true, updated_at: new Date().toISOString() });
+      return res.json({ success: true, action: 'archived', message: 'Profile for ' + clientName + ' archived. Data retained for compliance.' });
     }
-
   } catch (err) {
     console.error('delete-profile error:', err);
     res.status(500).json({ error: 'Failed to delete profile.', detail: err.message });
   }
 });
 
-// ============================================================
-// END CLIENT PROFILE STORAGE ENDPOINTS
 // ============================================================
 
 
