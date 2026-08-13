@@ -489,7 +489,7 @@ app.post('/generate-pdf', async (req, res) => {
     doc.moveDown(1);
 
     // ===== PARSE SECTIONS =====
-    const normalized = forceHeadingLinebreaks(text)
+    const normalized = forceHeadingLinebreaks(text).replace(/OU[\s\n]+Tsurance/g,"OUTsurance").replace(/OU\s*\n\s*Tsurance/g,'OUTsurance').replace(/OU\s+Tsurance/g,'OUTsurance')
       .replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-')
       .split('\n')
       .map(l => l.replace(/^\s+/, '').replace(/^#{1,3}\s*/, ''))

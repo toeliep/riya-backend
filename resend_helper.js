@@ -136,7 +136,7 @@ function buildWordDoc(clientName, brokerName, roaContent, brokerToken, adviceDat
       children: [new TextRun({ text: section.title.toUpperCase(), bold: true, size: 22, color: NAVY, font: 'Calibri' })]
     }));
 
-    const contentLines = section.content.split('\n');
+    const contentLines = section.content.replace(/OU[\s\n]+Tsurance/g,"OUTsurance").split('\n');
     for (const line of contentLines) {
       const trimmed = line.trim();
       if (!trimmed) {
