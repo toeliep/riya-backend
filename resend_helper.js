@@ -303,9 +303,39 @@ async function sendRoAEmail(brokerEmail, clientName, brokerName, roaContent, bro
   }
 }
 
-async function sendRoAToClient(clientEmail, clientName, brokerName, roaContent, brokerToken, acceptanceUrl) {
+async function sendRoAToClient(clientEmail, clientName, brokerName, roaContent, brokerToken, acceptanceUrl, triggerLabel, adviceDate) {
   try {
-    const html = buildClientEmailHtml(clientName, brokerName, roaContent, acceptanceUrl);
+    const dateStr = adviceDate || new Date().toLocaleDateString('en-ZA');
+    const html = `<div style="margin:0;padding:40px 20px;background:#F4F6F4;font-family:Calibri,Arial,sans-serif;">
+      <div style="max-width:600px;margin:0 auto;background:#ffffff;border-radius:4px;overflow:hidden;">
+        <div style="text-align:right;padding:16px 28px 8px;border-bottom:2px solid #C9A84C;">
+          <div style="color:#1B2A4A;font-size:15px;font-weight:bold;font-family:Calibri,Arial,sans-serif;">AFRICA BLOOM (PTY) LTD  |  T/A RIYA</div>
+          <div style="color:#C9A84C;font-size:11px;font-family:Calibri,Arial,sans-serif;">toelie@riya.co.za  |  www.riya.co.za</div>
+        </div>
+        <div style="padding:32px;">
+          <div style="text-align:center;margin-bottom:24px;">
+            <div style="font-size:20px;font-weight:bold;color:#1B2A4A;font-family:Calibri,Arial,sans-serif;letter-spacing:1px;">RECORD OF ADVICE</div>
+            <div style="color:#C9A84C;font-size:11px;font-style:italic;margin-top:4px;padding-bottom:10px;border-bottom:2px solid #C9A84C;">${triggerLabel || 'Record of Advice'}  |  ${dateStr}</div>
+          </div>
+          <p style="color:#333;font-family:Calibri,Arial,sans-serif;font-size:13px;">Dear ${clientName},</p>
+          <p style="color:#333;font-family:Calibri,Arial,sans-serif;font-size:13px;line-height:1.6;margin-top:12px;">
+            <strong>${brokerName || 'Your adviser'}</strong> has prepared a Record of Advice for your review. This document sets out the insurance advice provided to you and requires your acceptance before your policy can be placed.
+          </p>
+          <p style="color:#333;font-family:Calibri,Arial,sans-serif;font-size:13px;line-height:1.6;margin-top:12px;">
+            Please click the button below to read the full Record of Advice and confirm your acceptance.
+          </p>
+          <div style="text-align:center;margin:28px 0;">
+            <a href="${acceptanceUrl}" style="display:inline-block;background:#1B2A4A;color:#C9A84C;padding:14px 32px;text-decoration:none;border-radius:3px;font-family:Calibri,Arial,sans-serif;font-weight:bold;font-size:14px;letter-spacing:1px;">Review &amp; Accept Record of Advice</a>
+          </div>
+          <p style="color:#999;font-family:Calibri,Arial,sans-serif;font-size:11px;line-height:1.6;margin-top:12px;">
+            This link is valid for 30 days. If you have any questions, please contact your broker directly.
+          </p>
+        </div>
+        <div style="padding:12px 28px;border-top:2px solid #C9A84C;text-align:center;background:#fff;">
+          <span style="color:#C9A84C;font-size:9px;font-family:Calibri,Arial,sans-serif;">Riya — Africa Bloom (Pty) Ltd  |  toelie@riya.co.za  |  POPIA Compliant  |  FAIS Act 37/2002  |  BN 80/2003  |  GN 706/2020</span>
+        </div>
+      </div>
+    </div>`;
     await getResend().emails.send({
       from: 'Riya <hello@riya.co.za>',
       to: clientEmail,
