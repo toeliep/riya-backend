@@ -1000,8 +1000,8 @@ app.post('/inbound-roa', async (req, res) => {
     // Looks for patterns like "Client Name: Pieter van der Merwe" or "Client / Insured Name"
     let clientName = 'Unknown Client';
     const clientPatterns = [
-      /Client\s*\/?\s*Insured\s*Name[:\s]+([^\n]+)/i,
-      /Client\s*Name[:\s]+([^\n]+)/i,
+      /Client\s*\/?\s*Insured\s*Name[:\s]+([^\n\r,]+?)(?:\s*(?:FSP|ID|Tel|Contact|Email|New|Renew|Amend)|$)/i,
+      /Client\s*Name[:\s]+([^\n\r]+?)(?=\s*(?:FSP|ID|Tel|Contact|Email|New|Renew|Amend|\d{10})|$)/i,
       /Kli[eë]nt[:\s]+([^\n]+)/i,
       /Dear\s+([^\n,]+)/i
     ];
