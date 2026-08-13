@@ -1320,6 +1320,19 @@ app.post('/accept-roa', async (req, res) => {
       console.warn('Broker notification failed:', notifyErr.message);
     }
 
+    // Auto-archive signed RoA to sonja@inbound.riya.co.za
+    try {
+      const { Resend } = require('resend');
+      const r = new Resend(process.env.RESEND_API_KEY);
+      await r.emails.send({
+        from: 'Riya <hello@riya.co.za>',
+        to: 'sonja@inbound.riya.co.za',
+        subject: 'Signed RoA - ' + record.client_name + ' (' + new Date(acceptedAt).toLocaleDateString('en-ZA') + ')',
+        text: record.roa_content || 'RoA content unavailable'
+      });
+      console.log('Auto-archived:', record.client_name);
+    } catch(ae) { console.warn('Sonja archive failed:', ae.message); }
+
     return res.json({
       success: true,
       already_accepted: false,
