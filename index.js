@@ -50,8 +50,7 @@ const cors = require('cors');
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 
-function forceHeadingLinebreaks(text) {
-  let out = text.replace(/#{1,3}\s*(?=\d{1,2}\.\s+[A-Z])/gi, '');
+function forceHeadingLinebreaks(text)
   const knownTitles = [
     'FSP AND REPRESENTATIVE DETAILS',
     'CLIENT IDENTIFICATION,?\\s*KYC,?\\s*FICA AND POPIA(?:\\s+CONFIRMATION)?',
@@ -489,11 +488,7 @@ app.post('/generate-pdf', async (req, res) => {
     doc.moveDown(1);
 
     // ===== PARSE SECTIONS =====
-    const normalized = forceHeadingLinebreaks(text).replace(/OU[\s\n]+Tsurance/g,"OUTsurance").replace(/OU\s*\n\s*Tsurance/g,'OUTsurance').replace(/OU\s+Tsurance/g,'OUTsurance')
-      .replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-')
-      .split('\n')
-      .map(l => l.replace(/^\s+/, '').replace(/^#{1,3}\s*/, ''))
-      .join('\n');
+    const normalized = forceHeadingLinebreaks(text).replace(/OU[\s\S]*?Tsurance/g,"OUTsurance");
 
     const sectionRegex = /(?:^|\n)(\d{1,2})\.\s+([A-Z][^\n]{2,80})/g;
     let match;
