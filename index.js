@@ -943,5 +943,185 @@ app.delete('/delete-profile', async (req, res) => {
 // ============================================================
 
 
+
+// ============================================================
+// POST /inbound-roa
+// Receives inbound email webhook from Resend
+// Parses RoA content and saves to client_profiles
+// ============================================================
+app.post('/inbound-roa', async (req, res) => {
+  try {
+    const event = req.body;
+
+    // Only process email.received events
+    if (event.type !== 'email.received') {
+      return res.json({ success: true, message: 'Event ignored: ' + event.type });
+    }
+
+    const emailId = event.data?.email_id;
+    if (!emailId) {
+      return res.status(400).json({ error: 'No email_id in webhook payload.' });
+    }
+
+    console.log('Inbound RoA received, email_id:', emailId);
+
+    // Fetch full email body from Resend API
+    const emailData = await new Promise((resolve, reject) => {
+      const options = {
+        hostname: 'api.resend.com',
+        path: '/emails/' + emailId,
+        method: 'GET',
+        headers: {
+          'Authorization': 'Bearer ' + process.env.RESEND_API_KEY,
+          'Content-Type': 'application/json'
+        }
+      };
+      const req2 = https.request(options, (res2) => {
+        let data = '';
+        res2.on('data', chunk => data += chunk);
+        res2.on('end', () => {
+          try { resolve(JSON.parse(data)); }
+          catch(e) { reject(new Error('Failed to parse Resend email response')); }
+        });
+      });
+      req2.on('error', reject);
+      req2.end();
+    });
+
+    const emailBody = emailData.text || emailData.html || '';
+    const fromAddress = emailData.from || '';
+    const subject = emailData.subject || '';
+
+    if (!emailBody) {
+      return res.status(400).json({ error: 'Email body is empty.' });
+    }
+
+    // Parse client name from RoA text
+    // Looks for patterns like "Client Name: Pieter van der Merwe" or "Client / Insured Name"
+    let clientName = 'Unknown Client';
+    const clientPatterns = [
+      /Client\s*\/?\s*Insured\s*Name[:\s]+([^\n]+)/i,
+      /Client\s*Name[:\s]+([^\n]+)/i,
+      /Kli[eë]nt[:\s]+([^\n]+)/i,
+      /Dear\s+([^\n,]+)/i
+    ];
+    for (const pattern of clientPatterns) {
+      const match = emailBody.match(pattern);
+      if (match && match[1].trim().length > 2) {
+        clientName = match[1].trim().replace(/[<>]/g, '');
+        break;
+      }
+    }
+
+    // Parse trigger type from RoA text
+    let triggerEvent = 'Unknown';
+    if (/new\s*policy/i.test(emailBody) || /nuwe\s*polis/i.test(emailBody)) {
+      triggerEvent = 'New Policy';
+    } else if (/renewal/i.test(emailBody) || /hernuwing/i.test(emailBody)) {
+      triggerEvent = 'Renewal';
+    } else if (/amendment/i.test(emailBody) || /wysiging/i.test(emailBody)) {
+      triggerEvent = 'Amendment';
+    } else if (/telephone/i.test(emailBody) || /telefoon/i.test(emailBody)) {
+      triggerEvent = 'Telephone Advice';
+    }
+
+    // Parse FSP number to identify broker
+    let brokerToken = null;
+    const fspMatch = emailBody.match(/FSP\s*(?:No|Nr|Number|Nommer)?\.?\s*[:\s]*(\d{4,6})/i);
+    if (fspMatch) {
+      const fspNumber = fspMatch[1].trim();
+      // Look up broker by FSP number
+      try {
+        const brokerResult = await supabaseRequest('GET', 'brokers?fsp_number=eq.' + encodeURIComponent(fspNumber) + '&select=token,name,fsp_number');
+        if (brokerResult && brokerResult.length > 0) {
+          brokerToken = brokerResult[0].token;
+          console.log('Broker identified:', brokerResult[0].name, 'FSP:', fspNumber);
+        }
+      } catch(e) {
+        console.log('Broker lookup failed for FSP:', fspNumber);
+      }
+    }
+
+    // If broker not found by FSP, try by email sender
+    if (!brokerToken) {
+      const senderEmail = fromAddress.match(/[\w.-]+@[\w.-]+\.\w+/)?.[0];
+      if (senderEmail) {
+        try {
+          const brokerResult = await supabaseRequest('GET', 'brokers?email=eq.' + encodeURIComponent(senderEmail) + '&select=token,name');
+          if (brokerResult && brokerResult.length > 0) {
+            brokerToken = brokerResult[0].token;
+            console.log('Broker identified by email:', senderEmail);
+          }
+        } catch(e) {
+          console.log('Broker lookup by email failed:', senderEmail);
+        }
+      }
+    }
+
+    if (!brokerToken) {
+      console.log('Could not identify broker. FSP pattern not found or not in system.');
+      // Still save with unknown broker for manual review
+      return res.json({
+        success: false,
+        message: 'Broker not identified. FSP number not found in system.',
+        client_name: clientName,
+        trigger: triggerEvent
+      });
+    }
+
+    // Save to client_profiles
+    const newEvent = {
+      event_id: require('crypto').randomUUID(),
+      event_type: triggerEvent,
+      event_date: new Date().toISOString(),
+      roa_text: emailBody,
+      roa_id: 'email-' + emailId,
+      source: 'email-inbound',
+      email_subject: subject
+    };
+
+    const now = new Date().toISOString();
+    const expiresAt = new Date(Date.now() + 5 * 365.25 * 24 * 60 * 60 * 1000).toISOString();
+
+    const existing = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
+
+    if (existing && existing.length > 0) {
+      const profile = existing[0];
+      const updatedEvents = [...(profile.events || []), newEvent];
+      await supabaseRequest('PATCH', 'client_profiles?id=eq.' + encodeURIComponent(profile.id), {
+        events: updatedEvents,
+        last_activity_date: now,
+        expires_at: expiresAt,
+        updated_at: now
+      });
+      console.log('Profile updated for:', clientName, '| Events:', updatedEvents.length);
+      return res.json({ success: true, action: 'updated', client_name: clientName, trigger: triggerEvent, event_count: updatedEvents.length });
+    } else {
+      await supabaseRequest('POST', 'client_profiles', {
+        broker_token: brokerToken,
+        client_name: clientName,
+        client_id_number: null,
+        events: [newEvent],
+        last_activity_date: now,
+        expires_at: expiresAt,
+        is_archived: false,
+        created_at: now,
+        updated_at: now
+      });
+      console.log('New profile created for:', clientName);
+      return res.json({ success: true, action: 'created', client_name: clientName, trigger: triggerEvent, event_count: 1 });
+    }
+
+  } catch (err) {
+    console.error('inbound-roa error:', err);
+    res.status(500).json({ error: 'Failed to process inbound RoA.', detail: err.message });
+  }
+});
+
+// ============================================================
+// END INBOUND ROA ENDPOINT
+// ============================================================
+
+
 app.listen(PORT, () => console.log('Riya backend listening on port ' + PORT));
 
