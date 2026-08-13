@@ -1145,5 +1145,202 @@ app.post('/inbound-roa', async (req, res) => {
 // ============================================================
 
 
+
+// ============================================================
+// ELECTRONIC ACCEPTANCE / E-SIGNING ENDPOINTS
+// ============================================================
+
+// POST /send-roa-to-client
+// Generates unique acceptance link, stores RoA, emails client
+app.post('/send-roa-to-client', async (req, res) => {
+  try {
+    const { brokerToken, clientName, clientEmail, brokerName, roaContent, triggerLabel, adviceDate } = req.body;
+
+    if (!brokerToken || !clientName || !clientEmail || !roaContent) {
+      return res.status(400).json({ error: 'brokerToken, clientName, clientEmail and roaContent are required.' });
+    }
+
+    // Verify broker
+    const brokerResult = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(brokerToken) + '&select=id,name,email,fsp_number,fsp_firm_name');
+    if (!brokerResult || !brokerResult.length) {
+      return res.status(403).json({ error: 'Invalid broker token.' });
+    }
+    const broker = brokerResult[0];
+
+    // Generate unique acceptance token
+    const acceptanceToken = require('crypto').randomUUID();
+    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
+
+    // Store in acceptances table
+    await supabaseRequest('POST', 'acceptances', {
+      roa_token: brokerToken + '-' + Date.now(),
+      client_name: clientName,
+      client_email: clientEmail,
+      broker_token: brokerToken,
+      acceptance_token: acceptanceToken,
+      roa_content: roaContent,
+      expires_at: expiresAt,
+      accepted_at: null
+    });
+
+    // Build acceptance URL
+    const acceptanceUrl = 'https://riya-pilot.netlify.app/accept.html?token=' + acceptanceToken;
+
+    // Send email to client with full RoA + acceptance button
+    const { sendRoAToClient } = require('./resend_helper');
+    const emailResult = await sendRoAToClient(clientEmail, clientName, brokerName || broker.name, roaContent, brokerToken, acceptanceUrl, triggerLabel, adviceDate);
+
+    if (!emailResult.success) {
+      return res.status(500).json({ error: 'Failed to send email: ' + emailResult.error });
+    }
+
+    return res.json({
+      success: true,
+      message: 'RoA emailed to ' + clientEmail + ' with acceptance link.',
+      acceptance_url: acceptanceUrl,
+      expires_at: expiresAt
+    });
+
+  } catch (err) {
+    console.error('send-roa-to-client error:', err);
+    res.status(500).json({ error: 'Failed to send RoA to client.', detail: err.message });
+  }
+});
+
+
+// GET /accept-roa
+// Called when client clicks acceptance link — returns RoA content for display
+app.get('/accept-roa', async (req, res) => {
+  try {
+    const { token } = req.query;
+    if (!token) return res.status(400).json({ error: 'Token required.' });
+
+    const result = await supabaseRequest('GET', 'acceptances?acceptance_token=eq.' + encodeURIComponent(token) + '&select=*');
+    if (!result || !result.length) {
+      return res.status(404).json({ error: 'Acceptance link not found or expired.' });
+    }
+
+    const record = result[0];
+
+    // Check expiry
+    if (record.expires_at && new Date(record.expires_at) < new Date()) {
+      return res.status(410).json({ error: 'This acceptance link has expired. Please contact your broker for a new link.' });
+    }
+
+    // Check if already accepted
+    if (record.accepted_at) {
+      return res.json({
+        success: true,
+        already_accepted: true,
+        client_name: record.client_name,
+        accepted_at: record.accepted_at,
+        message: 'This Record of Advice was already accepted on ' + new Date(record.accepted_at).toLocaleDateString('en-ZA') + '.'
+      });
+    }
+
+    return res.json({
+      success: true,
+      already_accepted: false,
+      client_name: record.client_name,
+      client_email: record.client_email,
+      broker_token: record.broker_token,
+      roa_content: record.roa_content,
+      expires_at: record.expires_at
+    });
+
+  } catch (err) {
+    console.error('accept-roa GET error:', err);
+    res.status(500).json({ error: 'Failed to load acceptance record.', detail: err.message });
+  }
+});
+
+
+// POST /accept-roa
+// Called when client clicks "I Accept" button
+app.post('/accept-roa', async (req, res) => {
+  try {
+    const { token, clientName, clientEmail } = req.body;
+    if (!token) return res.status(400).json({ error: 'Token required.' });
+
+    const result = await supabaseRequest('GET', 'acceptances?acceptance_token=eq.' + encodeURIComponent(token) + '&select=*');
+    if (!result || !result.length) {
+      return res.status(404).json({ error: 'Acceptance link not found.' });
+    }
+
+    const record = result[0];
+
+    if (record.accepted_at) {
+      return res.json({ success: true, already_accepted: true, accepted_at: record.accepted_at });
+    }
+
+    if (record.expires_at && new Date(record.expires_at) < new Date()) {
+      return res.status(410).json({ error: 'This acceptance link has expired.' });
+    }
+
+    const acceptedAt = new Date().toISOString();
+    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
+
+    // Record acceptance
+    await supabaseRequest('PATCH', 'acceptances?acceptance_token=eq.' + encodeURIComponent(token), {
+      accepted_at: acceptedAt,
+      ip_address: ipAddress
+    });
+
+    // Notify broker
+    try {
+      const brokerResult = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(record.broker_token) + '&select=email,name');
+      if (brokerResult && brokerResult.length && brokerResult[0].email) {
+        const { Resend } = require('resend');
+        const resend = new Resend(process.env.RESEND_API_KEY);
+        await resend.emails.send({
+          from: 'Riya <hello@riya.co.za>',
+          to: brokerResult[0].email,
+          subject: 'RoA Accepted — ' + record.client_name,
+          html: `<div style="font-family:Calibri,Arial,sans-serif;max-width:600px;margin:0 auto;">
+            <div style="text-align:right;padding:16px 28px 8px;border-bottom:2px solid #C9A84C;">
+              <div style="color:#1B2A4A;font-size:15px;font-weight:bold;">AFRICA BLOOM (PTY) LTD  |  T/A RIYA</div>
+              <div style="color:#C9A84C;font-size:11px;">toelie@riya.co.za  |  www.riya.co.za</div>
+            </div>
+            <div style="padding:32px;background:#ffffff;">
+              <p style="color:#333;">Hi ${brokerResult[0].name || 'Adviser'},</p>
+              <p style="color:#333;"><strong style="color:#1B2A4A;">${record.client_name}</strong> has accepted the Record of Advice.</p>
+              <div style="background:#F4F6F4;border-left:4px solid #C9A84C;padding:16px;border-radius:3px;margin:16px 0;">
+                <div style="color:#1B2A4A;font-weight:bold;margin-bottom:4px;">Acceptance Details</div>
+                <div style="color:#333;font-size:13px;">Client: ${record.client_name}</div>
+                <div style="color:#333;font-size:13px;">Email: ${record.client_email}</div>
+                <div style="color:#333;font-size:13px;">Date: ${new Date(acceptedAt).toLocaleString('en-ZA')}</div>
+                <div style="color:#333;font-size:13px;">IP Address: ${ipAddress}</div>
+              </div>
+              <p style="color:#333;">This acceptance has been recorded in your Riya compliance record.</p>
+              <p style="color:#333;">Regards,<br/><strong>Riya</strong></p>
+            </div>
+            <div style="padding:12px 28px;border-top:2px solid #C9A84C;text-align:center;">
+              <span style="color:#C9A84C;font-size:9px;">Riya — Africa Bloom (Pty) Ltd  |  FAIS Act 37/2002  |  BN 80/2003  |  GN 706/2020</span>
+            </div>
+          </div>`
+        });
+      }
+    } catch (notifyErr) {
+      console.warn('Broker notification failed:', notifyErr.message);
+    }
+
+    return res.json({
+      success: true,
+      already_accepted: false,
+      accepted_at: acceptedAt,
+      message: 'Acceptance recorded successfully. Your broker has been notified.'
+    });
+
+  } catch (err) {
+    console.error('accept-roa POST error:', err);
+    res.status(500).json({ error: 'Failed to record acceptance.', detail: err.message });
+  }
+});
+
+// ============================================================
+// END ELECTRONIC ACCEPTANCE ENDPOINTS
+// ============================================================
+
+
 app.listen(PORT, () => console.log('Riya backend listening on port ' + PORT));
 
