@@ -1339,8 +1339,6 @@ app.post('/accept-roa', async (req, res) => {
       });
       console.log('Auto-archived to sonja@inbound.riya.co.za:', record.client_name);
     } catch(ae) { console.warn('Sonja archive failed:', ae.message); }
-    Acceptance recorded successfully. Your broker has been notified.'
-    });
 
   } catch (err) {
     console.error('accept-roa POST error:', err);
