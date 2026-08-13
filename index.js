@@ -1324,7 +1324,10 @@ app.post('/accept-roa', async (req, res) => {
       success: true,
       already_accepted: false,
       accepted_at: acceptedAt,
-      message: '// Auto-archive signed RoA to sonja@inbound.riya.co.za
+      message: 'Acceptance recorded successfully. Your broker has been notified.'
+    });
+
+    // Auto-archive signed RoA to sonja@inbound.riya.co.za
     try {
       const { Resend } = require('resend');
       const r = new Resend(process.env.RESEND_API_KEY);
