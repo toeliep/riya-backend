@@ -50,8 +50,9 @@ const cors = require('cors');
 app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 
-function forceHeadingLinebreaks(text)
-  const knownTitles = [
+function forceHeadingLinebreaks(text) {
+  let out = text;
+const knownTitles = [
     'FSP AND REPRESENTATIVE DETAILS',
     'CLIENT IDENTIFICATION,?\\s*KYC,?\\s*FICA AND POPIA(?:\\s+CONFIRMATION)?',
     'NEEDS ANALYSIS',
