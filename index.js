@@ -88,9 +88,20 @@ function forceHeadingLinebreaks(text) {
     'POPIA-Toestemming:',
     'FICA-Status:',
     'Eisgeskiedenisverklaring:',
-    'FAIS-Openbaarmaking:'
+    'FAIS-Openbaarmaking:',
+    'Adres:',
+    'Versekeraar:',
+    'Produkklassifikasie:',
+    'Dekkingsbasis:',
+    'Effektiewe Datum:',
+    'Vergoeding van FSP:',
+    'Belangebotsingsverklaring:',
+    'Metode van Aanvaarding:',
+    'Datum van Aanvaarding:'
   ];
   afLabels.forEach(function(l) { out = out.split(l).join('\n' + l); });
+  out = out.replace(/\bAanhangig\b/g, 'Uitstaande');
+  out = out.replace(/\bHangende\b/g, 'Uitstaande');
   return out;
 }
 
