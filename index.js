@@ -51,8 +51,8 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 
 function forceHeadingLinebreaks(text) {
-  let out = text;
-const knownTitles = [
+  let out = text.replace(/#{1,3}\s*(?=\d{1,2}\.\s+[A-Z])/gi, '');
+  const knownTitles = [
     'FSP AND REPRESENTATIVE DETAILS',
     'CLIENT IDENTIFICATION,?\\s*KYC,?\\s*FICA AND POPIA(?:\\s+CONFIRMATION)?',
     'NEEDS ANALYSIS',
@@ -115,77 +115,7 @@ function buildSystemRoa(userText, language) {  const base = language === 'af' ? 
   return base;
 }
 
-const SYSTEM_ROA_AF = "Jy is Riya, 'n kundige Suid-Afrikaanse FAIS-nakomingsassistent. Jy stel professionele, FAIS-konforme Rekords van Advies op vir Suid-Afrikaanse korttermynversekeringsmakelaars ingevolge die Wet op Finansiele Advies- en Tussengangersdienste, 2002 (Wet 37 van 2002), Raadskennisgewing 80 van 2003, en Algemene Kennisgewing 706 van 2020.
-
-Stel 'n volledige, professionele Rekord van Advies op wat AL die volgende afdelings dek:
-1. FSP- EN VERTEENWOORDIGERBESONDERHEDE
-2. KLIENTIDENTIFIKASIE, KYC, FICA EN POPIA
-3. BEHOEFTE-ANALISE
-4. MARKVERGELYKING
-5. AANBEVOLE PRODUK
-6. VERGOEDING EN BELANGEBOTSING
-7. VERVANGINGSADVIES
-8. KLIENT AANVAARDINGSREKORD
-
-KRITIEKE TERMINOLOGIE:
-- Gebruik FSP (nie VFD nie) - die afkorting bly FSP
-- Finansiele Diensverskaffer (FSP) vir die volledige naam
-- Verteenwoordiger Naam (nie Personeelverwysingsnommer nie)
-- Nakoming Beampte (nie Naasmakelaar nie)
-- Beroepsaanspreeklikheidsversekering (nie Beskerminginligting nie)
-- Wet op Finansiele Intelligensiesentrum, 2001 (FICA) - NIE 2020 NIE
-- Wet op Beskerming van Persoonlike Inligting, 2013 (POPIA)
-- Korttermynversekeringswet, 1998 (Wet 53 van 1998)
-- Raadskennisgewing 80 van 2003
-
-AFDELING 1 - elke veld op sy eie reel:
-Finansiele Diensverskaffer (FSP): [naam]
-FSP-Registrasienommer: [nommer]
-Adres: [adres]
-Verteenwoordiger Naam: [naam]
-Nakoming Beampte: [naam en organisasie]
-Beroepsaanspreeklikheidsversekering: Bevestig van krag
-Advisdatum: [datum]
-
-AFDELING 2 - elke veld op sy eie reel:
-Klient Naam: [naam]
-Identiteitsnommer: [nommer]
-Kontaknommer: [nommer]
-E-posadres: [e-pos]
-Residensiele Adres: [adres]
-Identiteitsverifikasie: [status]
-Adresbewys: [status]
-POPIA-Toestemming: [status]
-FICA-Status: [status]
-Eisgeskiedenisverklaring: [status]
-FAIS-Openbaarmaking: [status]
-
-AFDELING 3 - skryf duidelike paragrawe vir elke batekategorie. Elke voertuig kry sy eie paragraaf. Gebruik vloeiende professionele Afrikaans.
-
-AFDELING 4 - Vir hernuwing verduidelik waarom geen nuwe markvergelyking vereis word nie. Vir nuwe polis vergelyk drie versekeraars.
-
-AFDELING 5 - Lys elke versekerde item apart met versekerde bedrag, bybetaling en dekkingsbesonderhede. Sluit SASRIA in.
-
-AFDELING 6 - Vergoeding en Belangebotsing: vermeld kommissiepersentasie en bedrag. Verklaar geen belangebotsing.
-
-AFDELING 7 - Vervangingsadvies: verduidelik of vervanging van toepassing is of nie.
-
-AFDELING 8 - Sluit handtekeningreels in:
-Klient Handtekening: _________________________
-Klient Naam (drukskrif): _________________________
-Datum: _________________________
-Adviseur Handtekening: _________________________
-Adviseur Naam (drukskrif): _________________________
-Datum: _________________________
-
-TAALREELS:
-- Skryf vloeiende professionele Afrikaans soos n ervare makelaar
-- MOENIE woordeliks vertaal nie - dink in Afrikaans
-- Korrekte formulering: bestaande dekking blyk steeds toepaslik te wees
-- Korrekte formulering: geen wesenlike verandering in risiko is aangeteken nie
-- ALTYD paragraafbreuke tussen velde en afdelings
-- NOOIT velde saamvoeg op een reel nie
-- Gebruik slegs genommerde opskrifte - geen markdown nie";
+const SYSTEM_ROA_AF = "Jy is Riya, 'n kundige Suid-Afrikaanse FAIS-nakomingsassistent. Jy stel professionele, FAIS-konforme Rekords van Advies (RoA) op vir Suid-Afrikaanse korttermynversekeringsmakelaars ingevolge die Wet op Finansiële Advies- en Tussengangersdienste, 2002 (Wet 37 van 2002), Raadskennisgewing 80 van 2003, en Algemene Kennisgewing 706 van 2020.\nStel 'n volledige, professionele RoA op wat AL die volgende afdelings dek:\n1. VFD en Verteenwoordigerbesonderhede\n2. Kliëntidentifikasie en KYC/FICA/POPIA-bevestiging\n3. Behoefte-analise - volledige risikoprofiel en geïdentifiseerde behoeftes per batekategorie\n4. Markvergelyking - al drie versekeraars vergelyk met redes vir die aanbeveling\n5. Aanbevole Produk - volledige statutêre besonderhede ingevolge Artikel 9(1), insluitend uitsluitings, eksesstruktuur, SASRIA\n6. Vergoeding en Belangebotsingverklaring\n7. Vervangingsadvies (indien van toepassing)\n8. Kliënt Aanvaardingsrekord\nWees deeglik en substantief. Gebruik duidelike genommerde opskrifte. Skryf in professionele Afrikaans geskik vir FSCA-inspeksie. Moenie regspraak aanhaal nie. Gebruik GEEN markdown-tabelle nie. WETLIKE VERWYSINGS: Wet op Finansiële Intelligensiesentrum, 2001 (FICA); Wet op Finansiële Advies- en Tussengangersdienste, 2002 (Wet 37 van 2002); Korttermynversekeringswet, 1998 (Wet 53 van 1998); Wet op Beskerming van Persoonlike Inligting, 2013 (POPIA); Raadskennisgewing 80 van 2003; Algemene Kennisgewing 706 van 2020. KRITIEK: moenie '---' of '##' enige plek insluit nie. Gebruik slegs afdelingsnommers as opskrifte.";
 
 const AGRI_GUIDANCE_AF = " BYKOMENDE LANDBOU-RISIKO-LEIDING - hierdie toevoer behels 'n boerdery-/landboubedryf. Pas die volgende Suid-Afrikaanse landbouversekering-vakkennis toe: gewasdekking word normaalweg PER LAND gestruktureer via 'n Bewerkingsplan; gewasdekking is tipies 'n GENOEMDE-GEVAAR-struktuur met hael as die basisgevaar; die eksesstruktuur word normaalweg as 'n PERSENTASIE uitgedruk. Standaard gewasuitsluitings: droogte, Herfsleërwurm, gevolgskade, geoeste gewasse. SASRIA-dekking is 'n standaard statutêre insluiting ingevolge die Korttermynversekeringswet, 1998.";
 const SYSTEM_EXTRACT = "You are a South African FAIS insurance compliance assistant. Extract all available insurance and client details from the provided text. Return ONLY valid raw JSON - no preamble, no markdown, no backticks - with these exact keys: brokerName, fspNumber, advisorName, fspAddress, complianceOfficer, clientCommsMethod, clientName, clientContact, clientReg, clientEmail, clientAddress, businessNature, businessTurnover, fleetSize, fleetValue, fleetTypes, fleetTracking, gitRequired, gitLimit, gitGoods, insuranceClass, insurer, premium, sumInsured, coverBasis, exclusions, excessStructure, commission, cmp1Insurer, cmp1Premium, cmp1Excess, cmp1NotRec, cmpRecInsurer, cmpRecPremium, cmpRecExcess, cmpRecReason, cmp3Insurer, cmp3Premium, cmp3Excess, cmp3NotRec, replacement, replacementDetails, replacementReason, additionalFacts, conflictOfInterest, claimsNotes, triggerEvent, businessEmployees, publicLiabilityLimit, businessInterruptionRequired, vehicles, buildOwns, buildValue, buildSecurity, contentsSumInsured, scheduledItems, renewalPolicyNumber, renewalCurrentInsurer, renewalCurrentPremium, renewalNewPremium, renewalSumChanges, renewalRiskChange, renewalRemarketed, amendmentPolicyNumber, amendmentType, amendmentDescription, telephoneAdvice, telephoneFollowup, telephoneConfirmation, kycId, kycAddress, popiaConsent, claimsHistory, claimsNotes, faisDisclosure, existingCover, coverGaps. Use empty string for any field not found. For vehicles: extract as a JSON array of objects, each with keys: year, make, model, regNo, retailValue, primaryUse, driverAge, tracking, financed, overnightParking. Extract ALL vehicles mentioned. For buildOwns: use Yes-freehold if client owns home freehold, Yes-sectional-title if sectional title, No-renting if renting. For buildValue: extract the replacement/rebuild value as a number string. For buildSecurity: extract any security measures mentioned. For contentsSumInsured: extract contents sum insured as a number string. For advisorName: extract the name of the advising broker or representative from the input text. If no adviser name is mentioned in the input, leave this field as empty string — never use the word Riya as an adviser name. For clientReg: extract the client's South African ID number (13 digits) or company registration number (CIPC format) as a plain string with no spaces or formatting. ALWAYS extract a 13-digit number as an ID number and map it to clientReg. For clientContact: extract ONLY the phone/cell number as digits and spaces e.g. 071 882 3345 — never extract a person name into this field. For insuranceClass: if the client is a business, company, or contractor, ALWAYS start with Commercial-Lines e.g. Commercial-Lines-Motor-Plant-Equipment. If personal consumer, start with Personal-Lines. For triggerEvent: MUST be exactly one of these four values only: new, renewal, amendment, telephone. Use new if this is a new policy or new business. Use renewal if an existing policy is being renewed. Use amendment if cover is being changed. Use telephone if this is a telephone advice record. Default to new if unclear. For businessEmployees: extract number of permanent employees as a string. For publicLiabilityLimit: extract the public liability limit required as a string e.g. R10,000,000. For businessInterruptionRequired: set to Yes if business interruption cover is mentioned or required, otherwise No. For scheduledItems: extract as a semicolon-separated string of scheduled/all-risk items with values e.g. Rolex Submariner R65000; Laptop R28000. Include ALL valuable items mentioned with their values. For vehicles array: for each vehicle, set financed to YES if the text mentions finance, bond, WesBank, Absa, Nedbank, FNB, or any bank in relation to that vehicle, otherwise NO. Set overnightParking from any parking description. For clientCommsMethod: extract how the broker met or communicated with the client e.g. Home visit, Office meeting, Telephone, Email. For insuranceClass: extract the full insurance class e.g. Personal Lines - Motor, Household Contents, Buildings. For sumInsured: extract the total sum insured across all assets as a descriptive string e.g. Motor R680000 and R165000, Contents R380000, Buildings R2100000. CRITICAL RULE FOR replacement FIELD: only set replacement to YES if the text explicitly describes an existing policy being replaced, switched, or cancelled in favour of a new one (for example explicit phrases like existing policy with, currently insured with, switching from, replacing cover with). If the text describes a New Policy or does not mention any existing cover at all, replacement MUST be NO. Do not infer or assume a replacement scenario - default to NO whenever uncertain. CRITICAL RULE FOR cmpRecInsurer: this field must contain the insurer the broker explicitly marked or described as recommended, accepted, or chosen - never the insurer described as not recommended, rejected, or having reputation concerns, even if it is mentioned first or most prominently in the text. For renewalPolicyNumber: extract the existing policy number being renewed. For renewalCurrentInsurer: extract the name of the current insurer for the policy being renewed. For renewalCurrentPremium: extract the current/expiring annual premium as a number string. For renewalNewPremium: extract the renewal premium being offered as a number string. For renewalSumChanges: extract a description of any changes to sums insured since the last renewal, or state that nothing has changed if the text explicitly says so. For renewalRiskChange: this field must be set to EXACTLY one of these two strings only - No material change OR Yes — details below. DEFAULT to No material change unless the text EXPLICITLY and CLEARLY describes a specific change to the client's risk profile, such as a new address, new vehicle, new driver, or new valuables. Simply reviewing sums insured or renewing without any described change is NOT a risk profile change - if in doubt, use No material change. For renewalRemarketed: this field must be set to EXACTLY one of these two strings only - Yes — comparison below OR No — renewal competitive. Use the Yes option only if the broker obtained comparative quotes from other insurers this renewal; otherwise use the No option. For amendmentPolicyNumber: extract the existing policy number being amended. For amendmentType: extract a short description of the type of amendment, for example Adding a vehicle, Removing a vehicle, Sum insured change, or Address change. For amendmentDescription: extract a full description of the amendment including the reason for the change. For telephoneAdvice: extract a full description of the client's question or enquiry and the specific advice given by the broker on the call - this must be substantive, not a one-line summary. For telephoneFollowup: extract the follow-up action required, including any outstanding items and timelines mentioned. For telephoneConfirmation: set to \"Yes - email sent\" if an email confirmation was sent to the client, \"Yes - WhatsApp sent\" if confirmed via WhatsApp, or \"No follow-up required\" if no confirmation was mentioned as sent. For gitRequired: set to Yes if goods in transit cover is mentioned as required, a per-conveyance limit is stated, or type of goods carried is described - otherwise No. For kycId: this field must be set to EXACTLY one of these three strings only - Yes — certified copy on file OR Yes — eKYC verified OR Pending. DEFAULT to Pending unless the text EXPLICITLY states ID or CIPC registration was verified or a certified copy was obtained - do not infer verification just because KYC is mentioned generally. For kycAddress: this field must be set to EXACTLY one of these three strings only - Yes — on file, not older than 3 months OR Pending OR Not required (commercial). DEFAULT to Pending unless the text EXPLICITLY states proof of address was obtained or is on file. For popiaConsent: this field must be set to EXACTLY one of these three strings only - Yes — signed consent on file OR Yes — digital consent captured OR Pending. DEFAULT to Pending unless the text EXPLICITLY states POPIA consent was signed or captured. For claimsHistory: this field must be set to EXACTLY one of these three strings only - Yes — declared, no material claims OR Yes — claims declared (see below) OR Not yet declared. Use the no material claims option only if the text explicitly states no claims to declare; use the claims declared option only if specific claims are described; otherwise DEFAULT to Not yet declared. For claimsNotes: extract details of any specific claims declared by the client, or leave empty if none mentioned. For faisDisclosure: this field must be set to EXACTLY one of these two strings only - Yes — provided and acknowledged OR Pending. DEFAULT to Pending unless the text EXPLICITLY states the FAIS disclosure document was provided and/or acknowledged. For existingCover: extract a description of the client's existing policies, insurers, and policy numbers currently in place if mentioned, or leave empty if not mentioned. For coverGaps: extract any identified gaps or duplications in current cover mentioned in the text, or leave empty if not mentioned. IMPORTANT - MULTIPLE DOCUMENTS: the input text may contain several documents concatenated together, each preceded by a '--- FROM: filename ---' marker. You MUST read and extract relevant details from EVERY document present, not only the first or the last one. Merge details found across all documents into the single JSON output - for example, a vehicle mentioned only in one document and a policy premium mentioned only in another must both appear in the final result.";
@@ -478,46 +408,39 @@ app.post('/transcribe-voice', multerUpload.single('audio'), async (req, res) => 
   }
 });
 
-
-
-// NEW /generate-pdf endpoint — agreement style (no banners)
-// Replace the entire app.post('/generate-pdf', ...) block in index.js with this
-
 app.post('/generate-pdf', async (req, res) => {
   const { text, clientName, fspName, triggerLabel, adviceDate, brokerToken } = req.body;
   if (!text) return res.status(400).json({ error: 'No text provided' });
 
   try {
-    const NAVY = '#1B2A4A';
-    const GOLD = '#C9A84C';
-    const DARK = '#333333';
+    const NAVY = '#1F3B6E';
+    const GOLD = '#D4A574';
 
-    const doc = new PDFDocument({ margin: 60, size: 'A4', info: { Title: 'Record of Advice', Author: 'Riya' } });
+    const doc = new PDFDocument({ margin: 45, size: 'A4' });
     const chunks = [];
     doc.on('data', chunk => chunks.push(chunk));
     doc.on('end', () => {
       const pdfBuffer = Buffer.concat(chunks);
       res.setHeader('Content-Type', 'application/pdf');
-      res.setHeader('Content-Disposition', 'attachment; filename="RoA-' + (clientName || 'Client').replace(/[^a-zA-Z0-9]/g, '') + '.pdf"');
+      res.setHeader('Content-Disposition', 'attachment; filename="RoA.pdf"');
       res.send(pdfBuffer);
     });
 
     const pageWidth = doc.page.width;
-    const marginLeft = 60;
-    const marginRight = 60;
+    const marginLeft = 45;
+    const marginRight = 45;
     const contentWidth = pageWidth - marginLeft - marginRight;
 
-    // ===== HEADER — right-aligned, agreement style =====
-    doc.fontSize(13).font('Helvetica-Bold').fillColor(NAVY)
-      .text('AFRICA BLOOM (PTY) LTD  |  T/A RIYA', marginLeft, 40, { width: contentWidth, align: 'right' });
-    doc.fontSize(9).font('Helvetica').fillColor(GOLD)
-      .text('toelie@riya.co.za  |  www.riya.co.za', marginLeft, 56, { width: contentWidth, align: 'right' });
+    // ===== HEADER =====
+    doc.rect(0, 0, pageWidth, 80).fill(NAVY);
+    doc.fontSize(22).font('Helvetica-Bold').fillColor('#FFFFFF').text('RECORD OF ADVICE', 0, 18, { align: 'center' });
+    doc.fontSize(10).font('Helvetica').fillColor(GOLD).text(
+      'FAIS & GCoC Compliant  |  ' + (adviceDate || new Date().toLocaleDateString('en-ZA')),
+      0, 48, { align: 'center' }
+    );
 
-    // Gold header rule
-    doc.moveTo(marginLeft, 72).lineTo(pageWidth - marginRight, 72).strokeColor(GOLD).lineWidth(1.5).stroke();
-
-    // ===== LOGO — top right, below header rule =====
-    let logoBottom = 85;
+    // ===== LOGO (restored broker logo mapping) =====
+    let hasLogo = false;
     try {
       const logoMap = {
         'RIYA-GOMES-001': { file: 'kensten-logo.png', width: 90, height: 45 },
@@ -526,49 +449,49 @@ app.post('/generate-pdf', async (req, res) => {
         'RIYA-GROBLER-001': { file: 'galinco-logo.png', width: 110, height: 38 },
         'RIYA-TWK-001': { file: 'twk-logo.png', width: 60, height: 60 },
         'RIYA-APBCO-001': { file: 'apbco-logo.jpg', width: 90, height: 45 },
-        'RIYA-LIBRA-001': { file: 'Libra-Brokers-Logo.png', width: 90, height: 60 },
+       'RIYA-LIBRA-001': { file: 'Libra-Brokers-Logo.png', width: 90, height: 60 },
         'RIYA-BUXMAN-001': { file: 'million-bux-logo.png', width: 120, height: 44 }
       };
       const logoConfig = logoMap[brokerToken];
       if (logoConfig) {
         const logoPath = __dirname + '/assets/' + logoConfig.file;
         if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, pageWidth - marginRight - logoConfig.width, 80, {
+          doc.image(logoPath, pageWidth - marginRight - logoConfig.width, 90, {
             width: logoConfig.width, height: logoConfig.height, fit: [logoConfig.width, logoConfig.height]
           });
-          logoBottom = 80 + logoConfig.height + 10;
+          hasLogo = true;
         }
       }
-    } catch (logoErr) { console.warn('Logo error:', logoErr.message); }
+    } catch (logoErr) {
+      console.warn('Logo error:', logoErr.message);
+    }
 
-    // ===== TITLE =====
-    doc.y = Math.max(logoBottom, 85);
-    doc.fontSize(20).font('Helvetica-Bold').fillColor(NAVY)
-      .text('RECORD OF ADVICE', marginLeft, doc.y, { width: contentWidth, align: 'center' });
-    doc.moveDown(0.3);
+    doc.y = hasLogo ? 145 : 95;
 
-    const triggerBadge = triggerLabel || 'Record of Advice';
-    const dateStr = adviceDate || new Date().toLocaleDateString('en-ZA');
-    doc.fontSize(10).font('Helvetica').fillColor(GOLD)
-      .text(triggerBadge + '  |  ' + (fspName || '') + (fspName ? '  |  ' : '') + dateStr,
-        marginLeft, doc.y, { width: contentWidth, align: 'center' });
-    doc.moveDown(0.8);
+    // ===== ROBUST SECTION PARSING =====
+    // Apply the same heading-repair used in RoA generation, so any run-on
+    // heading (e.g. "DETAILSFinancial...") is split before parsing sections.
+    const repaired = forceHeadingLinebreaks(text);
+    // Strip any leading whitespace and stray markdown before each line first,
+    // so indentation or leftover '#'/'##' never causes a silent zero-match.
+    const normalized = repaired
+      .replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-')
+      .replace(/[\u2012\u2013\u2014\u2015\u2212]/g, '-')
+      .split('\n')
+      .map(l => l.replace(/^\s+/, '').replace(/^#{1,3}\s*/, ''))
+      .join('\n');
 
-    // Second gold rule
-    doc.moveTo(marginLeft, doc.y).lineTo(pageWidth - marginRight, doc.y).strokeColor(GOLD).lineWidth(1.5).stroke();
-    doc.moveDown(1);
-
-    // ===== PARSE SECTIONS =====
-    const normalized = forceHeadingLinebreaks(text).replace(/OU[\s\S]*?Tsurance/g,"OUTsurance");
-
+    const sections = [];
     const sectionRegex = /(?:^|\n)(\d{1,2})\.\s+([A-Z][^\n]{2,80})/g;
     let match;
     const matches = [];
     while ((match = sectionRegex.exec(normalized)) !== null) {
-      matches.push({ number: match[1], title: match[2].trim(), index: match.index + (match[0].startsWith('\n') ? 1 : 0) });
+      matches.push({
+        number: match[1],
+        title: match[2].trim(),
+        index: match.index + (match[0].startsWith('\n') ? 1 : 0)
+      });
     }
-
-    const sections = [];
     for (let i = 0; i < matches.length; i++) {
       const start = matches[i].index;
       const end = i + 1 < matches.length ? matches[i + 1].index : normalized.length;
@@ -577,71 +500,60 @@ app.post('/generate-pdf', async (req, res) => {
       sections.push({ number: matches[i].number, title: matches[i].title, content });
     }
 
+    // Fail-safe: if parsing ever finds zero sections, render the raw text
+    // rather than producing a blank body between header and footer.
     if (sections.length === 0) {
-      doc.fontSize(9.5).font('Helvetica').fillColor(DARK).text(normalized, marginLeft, doc.y, { width: contentWidth });
+      doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(normalized, marginLeft, doc.y, { width: contentWidth });
     }
 
     // ===== RENDER SECTIONS =====
     for (const section of sections) {
-      if (doc.y > doc.page.height - 120) { doc.addPage(); doc.y = 60; }
+      if (doc.y > doc.page.height - 100) { doc.addPage(); doc.y = 45; }
 
-      // Section heading — navy bold + gold underline
-      doc.fontSize(11).font('Helvetica-Bold').fillColor(NAVY)
-        .text(section.number + '.   ' + section.title.toUpperCase(), marginLeft, doc.y, { width: contentWidth });
-      doc.moveTo(marginLeft, doc.y).lineTo(pageWidth - marginRight, doc.y).strokeColor(GOLD).lineWidth(1).stroke();
-      doc.moveDown(0.6);
+      const headerY = doc.y;
+      doc.rect(0, headerY, pageWidth, 26).fill(NAVY);
+      doc.fontSize(11).font('Helvetica-Bold').fillColor(GOLD).text(
+        '  ' + section.number + '. ' + section.title.toUpperCase(),
+        marginLeft, headerY + 7, { width: contentWidth }
+      );
+      doc.y = headerY + 34;
 
-      // Content lines
-      const lines = section.content.split('\n');
+      const lines = section.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       for (const line of lines) {
-        const trimmed = line.trim();
-
-        if (!trimmed) { doc.moveDown(0.35); continue; }
-        if (doc.y > doc.page.height - 80) { doc.addPage(); doc.y = 60; }
-
-        const isBullet = /^[•\u2022\-\*]\s*/.test(trimmed);
-        const isSubHeading = !isBullet && trimmed.endsWith(':') && trimmed.length < 70;
-        const isSignatureLine = /^(Client Signature|Client Name|Adviser Signature|Adviser Name|Date):/.test(trimmed);
+        if (doc.y > doc.page.height - 60) { doc.addPage(); doc.y = 45; }
+        const isBullet = /^[•\-\*]\s+/.test(line);
+        const isSubHeading = /^[A-Z][A-Za-z\s&/()-]*:\s*$/.test(line) && line.length < 70;
 
         if (isSubHeading) {
           doc.moveDown(0.3);
-          doc.fontSize(9.5).font('Helvetica-Bold').fillColor(NAVY).text(trimmed, marginLeft, doc.y, { width: contentWidth });
-          doc.moveDown(0.3);
+          doc.fontSize(10).font('Helvetica-Bold').fillColor(NAVY).text(line, marginLeft, doc.y, { width: contentWidth });
+          doc.moveDown(0.2);
         } else if (isBullet) {
-          const bulletText = trimmed.replace(/^[•\u2022\-\*]\s*/, '');
-          doc.fontSize(9.5).font('Helvetica').fillColor(DARK)
-            .text('\u2022  ' + bulletText, marginLeft + 16, doc.y, { width: contentWidth - 16 });
-          doc.moveDown(0.35);
-        } else if (isSignatureLine) {
-          doc.moveDown(0.4);
-          doc.fontSize(9.5).font('Helvetica').fillColor(DARK).text(trimmed, marginLeft, doc.y, { width: contentWidth });
-          doc.moveDown(0.8);
+          doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(line, marginLeft + 12, doc.y, { width: contentWidth - 12 });
+          doc.moveDown(0.3);
         } else {
-          doc.fontSize(9.5).font('Helvetica').fillColor(DARK).text(trimmed, marginLeft, doc.y, { width: contentWidth });
-          doc.moveDown(0.4);
+          doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(line, marginLeft, doc.y, { width: contentWidth });
+          doc.moveDown(0.3);
         }
       }
-
-      doc.moveDown(0.6);
-      doc.moveTo(marginLeft, doc.y).lineTo(pageWidth - marginRight, doc.y).strokeColor('#CCCCCC').lineWidth(0.5).stroke();
-      doc.moveDown(0.8);
+      doc.moveDown(0.7);
     }
 
     // ===== FOOTER =====
     if (doc.y > doc.page.height - 60) doc.addPage();
-    doc.moveDown(0.5);
-    doc.moveTo(marginLeft, doc.y).lineTo(pageWidth - marginRight, doc.y).strokeColor(GOLD).lineWidth(1.5).stroke();
-    doc.moveDown(0.4);
-    doc.fontSize(7.5).font('Helvetica').fillColor(GOLD)
-      .text('Riya — Africa Bloom (Pty) Ltd  |  toelie@riya.co.za  |  POPIA Compliant  |  FAIS Act 37/2002  |  BN 80/2003  |  GN 706/2020  |  5-year retention required',
-        marginLeft, doc.y, { width: contentWidth, align: 'center' });
+    doc.moveDown(1);
+    const footerY = doc.y;
+    doc.rect(0, footerY, pageWidth, 30).fill(NAVY);
+    doc.fontSize(7.5).font('Helvetica').fillColor(GOLD).text(
+      'Generated by Riya  |  Africa Bloom (Pty) Ltd  |  FAIS Act 37/2002  |  BN 80/2003  |  GN 706/2020  |  5-year retention required',
+      marginLeft, footerY + 10, { align: 'center', width: contentWidth }
+    );
 
     doc.end();
   } catch(err) {
     res.status(500).json({ error: err.message });
   }
 });
-
 
 app.get('/credits', async (req, res) => {
   const { token } = req.query;
@@ -950,496 +862,6 @@ app.delete('/delete-draft', async (req, res) => {
     return res.status(500).json({ error: e.message });
   }
 });
-
-
-
-// ============================================================
-// CLIENT PROFILE STORAGE ENDPOINTS
-// ============================================================
-
-// POST /save-profile (RoA text only)
-app.post('/save-profile', async (req, res) => {
-  try {
-    const { brokerToken, clientName, triggerEvent, roaText, roaId, adviceDate } = req.body;
-    if (!brokerToken || !clientName || !triggerEvent || !roaText) return res.status(400).json({ error: 'brokerToken, clientName, triggerEvent and roaText are required.' });
-    try { const b = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(brokerToken) + '&select=id'); if (!b || !b.length) return res.status(403).json({ error: 'Invalid broker token.' }); } catch(e) { return res.status(403).json({ error: 'Invalid broker token.' }); }
-    const ev = { event_id: require('crypto').randomUUID(), event_type: triggerEvent, event_date: adviceDate || new Date().toISOString(), roa_text: roaText, roa_id: roaId || null };
-    const now = new Date().toISOString(); const exp = new Date(Date.now() + 5*365.25*24*60*60*1000).toISOString();
-    const ex = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
-    if (ex && ex.length > 0) {
-      const upd = [...(ex[0].events || []), ev];
-      await supabaseRequest('PATCH', 'client_profiles?id=eq.' + encodeURIComponent(ex[0].id), { events: upd, last_activity_date: now, expires_at: exp, updated_at: now });
-      return res.json({ success: true, action: 'updated', message: triggerEvent + ' RoA saved for ' + clientName, event_count: upd.length });
-    } else {
-      await supabaseRequest('POST', 'client_profiles', { broker_token: brokerToken, client_name: clientName, client_id_number: null, events: [ev], last_activity_date: now, expires_at: exp, is_archived: false, created_at: now, updated_at: now });
-      return res.json({ success: true, action: 'created', message: 'New profile created for ' + clientName, event_count: 1 });
-    }
-  } catch (err) { console.error('save-profile error:', err); res.status(500).json({ error: 'Failed to save profile.', detail: err.message }); }
-});
-
-app.get('/load-profile', async (req, res) => {
-  try {
-    const { brokerToken, clientName } = req.query;
-    if (!brokerToken || !clientName) return res.status(400).json({ error: 'brokerToken and clientName are required.' });
-    const profile = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
-    if (!profile || !profile.length) return res.status(404).json({ error: 'No profile found for ' + clientName + '.' });
-    const p = profile[0];
-    const sortedEvents = (p.events || []).sort((a, b) => new Date(b.event_date) - new Date(a.event_date));
-    return res.json({ success: true, profile: { id: p.id, client_name: p.client_name, client_id_number: p.client_id_number, created_at: p.created_at, last_activity_date: p.last_activity_date, expires_at: p.expires_at, is_archived: p.is_archived, event_count: sortedEvents.length, events: sortedEvents, latest_form_data: sortedEvents.length > 0 ? sortedEvents[0].form_data : null } });
-  } catch (err) {
-    console.error('load-profile error:', err);
-    res.status(500).json({ error: 'Failed to load profile.', detail: err.message });
-  }
-});
-app.get('/list-profiles', async (req, res) => {
-  try {
-    const { brokerToken } = req.query;
-    if (!brokerToken) return res.status(400).json({ error: 'brokerToken is required.' });
-    const profiles = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&is_archived=eq.false&order=last_activity_date.desc');
-    const summaries = (profiles || []).map(p => {
-      const events = p.events || [];
-      const latest = events.sort((a, b) => new Date(b.event_date) - new Date(a.event_date))[0];
-      const daysToExpiry = Math.ceil((new Date(p.expires_at) - new Date()) / (1000 * 60 * 60 * 24));
-      return { id: p.id, client_name: p.client_name, client_id_number: p.client_id_number, event_count: events.length, last_trigger: latest ? latest.event_type : null, last_lines_type: latest ? latest.lines_type : null, last_activity_date: p.last_activity_date, expires_at: p.expires_at, days_to_expiry: daysToExpiry, expiry_warning: daysToExpiry <= 30, created_at: p.created_at };
-    });
-    return res.json({ success: true, total: summaries.length, profiles: summaries });
-  } catch (err) {
-    console.error('list-profiles error:', err);
-    res.status(500).json({ error: 'Failed to list profiles.', detail: err.message });
-  }
-});
-app.delete('/delete-profile', async (req, res) => {
-  try {
-    const { brokerToken, clientName, hardDelete } = req.body;
-    if (!brokerToken || !clientName) return res.status(400).json({ error: 'brokerToken and clientName are required.' });
-    const profile = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
-    if (!profile || !profile.length) return res.status(404).json({ error: 'No profile found for ' + clientName + '.' });
-    const p = profile[0];
-    if (hardDelete === true) {
-      await supabaseRequest('DELETE', 'client_profiles?id=eq.' + encodeURIComponent(p.id));
-      return res.json({ success: true, action: 'deleted', message: 'Profile for ' + clientName + ' permanently deleted.' });
-    } else {
-      await supabaseRequest('PATCH', 'client_profiles?id=eq.' + encodeURIComponent(p.id), { is_archived: true, updated_at: new Date().toISOString() });
-      return res.json({ success: true, action: 'archived', message: 'Profile for ' + clientName + ' archived. Data retained for compliance.' });
-    }
-  } catch (err) {
-    console.error('delete-profile error:', err);
-    res.status(500).json({ error: 'Failed to delete profile.', detail: err.message });
-  }
-});
-
-// ============================================================
-
-
-
-// ============================================================
-// POST /inbound-roa
-// Receives inbound email webhook from Resend
-// Parses RoA content and saves to client_profiles
-// ============================================================
-app.post('/inbound-roa', async (req, res) => {
-  try {
-    const event = req.body;
-
-    // Only process email.received events
-    if (event.type !== 'email.received') {
-      return res.json({ success: true, message: 'Event ignored: ' + event.type });
-    }
-
-    const emailId = event.data?.email_id;
-    if (!emailId) {
-      return res.status(400).json({ error: 'No email_id in webhook payload.' });
-    }
-
-    console.log('Inbound RoA received, email_id:', emailId);
-
-    // Fetch full email body from Resend API
-    const emailData = await new Promise((resolve, reject) => {
-      const options = {
-        hostname: 'api.resend.com',
-        path: '/emails/receiving/' + emailId,
-        method: 'GET',
-        headers: {
-          'Authorization': 'Bearer ' + process.env.RESEND_API_KEY,
-          'Content-Type': 'application/json'
-        }
-      };
-      const req2 = https.request(options, (res2) => {
-        let data = '';
-        res2.on('data', chunk => data += chunk);
-        res2.on('end', () => {
-          try { resolve(JSON.parse(data)); }
-          catch(e) { reject(new Error('Failed to parse Resend email response')); }
-        });
-      });
-      req2.on('error', reject);
-      req2.end();
-    });
-
-    const emailBody = emailData.text || emailData.html || '';
-    const fromAddress = emailData.from || '';
-    const subject = emailData.subject || '';
-
-    if (!emailBody) {
-      return res.status(400).json({ error: 'Email body is empty.' });
-    }
-
-    // Parse client name from RoA text
-    // Looks for patterns like "Client Name: Pieter van der Merwe" or "Client / Insured Name"
-    let clientName = 'Unknown Client';
-    const clientPatterns = [
-      /Client\s*\/?\s*Insured\s*Name[:\s]+([^\n\r,]+?)(?:\s*(?:FSP|ID|Tel|Contact|Email|New|Renew|Amend)|$)/i,
-      /Client\s*Name[:\s]+([^\n\r]+?)(?=\s*(?:FSP|ID|Tel|Contact|Email|New|Renew|Amend|\d{10})|$)/i,
-      /Kli[eë]nt[:\s]+([^\n]+)/i,
-      /Dear\s+([^\n,]+)/i
-    ];
-    for (const pattern of clientPatterns) {
-      const match = emailBody.match(pattern);
-      if (match && match[1].trim().length > 2) {
-        clientName = match[1].trim().replace(/[<>]/g, '');
-        break;
-      }
-    }
-
-    // Parse trigger type from RoA text
-    let triggerEvent = 'Unknown';
-    if (/new\s*policy/i.test(emailBody) || /nuwe\s*polis/i.test(emailBody)) {
-      triggerEvent = 'New Policy';
-    } else if (/renewal/i.test(emailBody) || /hernuwing/i.test(emailBody)) {
-      triggerEvent = 'Renewal';
-    } else if (/amendment/i.test(emailBody) || /wysiging/i.test(emailBody)) {
-      triggerEvent = 'Amendment';
-    } else if (/telephone/i.test(emailBody) || /telefoon/i.test(emailBody)) {
-      triggerEvent = 'Telephone Advice';
-    }
-
-    // Parse FSP number to identify broker
-    let brokerToken = null;
-    const fspMatch = emailBody.match(/FSP\s*(?:No|Nr|Number|Nommer)?\.?\s*[:\s]*(\d{4,6})/i);
-    if (fspMatch) {
-      const fspNumber = fspMatch[1].trim();
-      // Look up broker by FSP number
-      try {
-        const brokerResult = await supabaseRequest('GET', 'brokers?fsp_number=eq.' + encodeURIComponent(fspNumber) + '&select=token,name,fsp_number');
-        if (brokerResult && brokerResult.length > 0) {
-          brokerToken = brokerResult[0].token;
-          console.log('Broker identified:', brokerResult[0].name, 'FSP:', fspNumber);
-        }
-      } catch(e) {
-        console.log('Broker lookup failed for FSP:', fspNumber);
-      }
-    }
-
-    // If broker not found by FSP, try by email sender
-    if (!brokerToken) {
-      const senderEmail = fromAddress.match(/[\w.-]+@[\w.-]+\.\w+/)?.[0];
-      if (senderEmail) {
-        try {
-          const brokerResult = await supabaseRequest('GET', 'brokers?email=eq.' + encodeURIComponent(senderEmail) + '&select=token,name');
-          if (brokerResult && brokerResult.length > 0) {
-            brokerToken = brokerResult[0].token;
-            console.log('Broker identified by email:', senderEmail);
-          }
-        } catch(e) {
-          console.log('Broker lookup by email failed:', senderEmail);
-        }
-      }
-    }
-
-    if (!brokerToken) {
-      console.log('Could not identify broker. FSP pattern not found or not in system.');
-      // Still save with unknown broker for manual review
-      return res.json({
-        success: false,
-        message: 'Broker not identified. FSP number not found in system.',
-        client_name: clientName,
-        trigger: triggerEvent
-      });
-    }
-
-    // Save to client_profiles
-    const newEvent = {
-      event_id: require('crypto').randomUUID(),
-      event_type: triggerEvent,
-      event_date: new Date().toISOString(),
-      roa_text: emailBody,
-      roa_id: 'email-' + emailId,
-      source: 'email-inbound',
-      email_subject: subject
-    };
-
-    const now = new Date().toISOString();
-    const expiresAt = new Date(Date.now() + 5 * 365.25 * 24 * 60 * 60 * 1000).toISOString();
-
-    const existing = await supabaseRequest('GET', 'client_profiles?broker_token=eq.' + encodeURIComponent(brokerToken) + '&client_name=eq.' + encodeURIComponent(clientName));
-
-    if (existing && existing.length > 0) {
-      const profile = existing[0];
-      const updatedEvents = [...(profile.events || []), newEvent];
-      await supabaseRequest('PATCH', 'client_profiles?id=eq.' + encodeURIComponent(profile.id), {
-        events: updatedEvents,
-        last_activity_date: now,
-        expires_at: expiresAt,
-        updated_at: now
-      });
-      console.log('Profile updated for:', clientName, '| Events:', updatedEvents.length);
-      return res.json({ success: true, action: 'updated', client_name: clientName, trigger: triggerEvent, event_count: updatedEvents.length });
-    } else {
-      await supabaseRequest('POST', 'client_profiles', {
-        broker_token: brokerToken,
-        client_name: clientName,
-        client_id_number: null,
-        events: [newEvent],
-        last_activity_date: now,
-        expires_at: expiresAt,
-        is_archived: false,
-        created_at: now,
-        updated_at: now
-      });
-      console.log('New profile created for:', clientName);
-      return res.json({ success: true, action: 'created', client_name: clientName, trigger: triggerEvent, event_count: 1 });
-    }
-
-  } catch (err) {
-    console.error('inbound-roa error:', err);
-    res.status(500).json({ error: 'Failed to process inbound RoA.', detail: err.message });
-  }
-});
-
-// ============================================================
-// END INBOUND ROA ENDPOINT
-// ============================================================
-
-
-
-// ============================================================
-// ELECTRONIC ACCEPTANCE / E-SIGNING ENDPOINTS
-// ============================================================
-
-// POST /send-roa-to-client
-// Generates unique acceptance link, stores RoA, emails client
-app.post('/send-roa-to-client', async (req, res) => {
-  try {
-    const { brokerToken, clientName, clientEmail, brokerName, roaContent, triggerLabel, adviceDate } = req.body;
-
-    if (!brokerToken || !clientName || !clientEmail || !roaContent) {
-      return res.status(400).json({ error: 'brokerToken, clientName, clientEmail and roaContent are required.' });
-    }
-
-    // Verify broker
-    const brokerResult = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(brokerToken) + '&select=id,name,email,fsp_number,fsp_firm_name');
-    if (!brokerResult || !brokerResult.length) {
-      return res.status(403).json({ error: 'Invalid broker token.' });
-    }
-    const broker = brokerResult[0];
-
-    // Generate unique acceptance token
-    const acceptanceToken = require('crypto').randomUUID();
-    const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
-
-    // Clean RoA text before storing — force newlines before section numbers
-    const cleanedRoA = (roaContent || '')
-      .replace(/OU[\s\S]*?Tsurance/g, 'OUTsurance')
-      .replace(/Ford Ranger (\d\.\d) TD[\s\n]*Ci/g, 'Ford Ranger $1 TDCi')
-      .replace(/([^\n])(\d{1,2}\. (?:FSP|CLIENT|NEEDS|MARKET|PRODUCT|REMUNERATION|REPLACEMENT|CLIENT ACCEPTANCE))/g, '$1\n\n$2')
-      .replace(/\n{3,}/g, '\n\n');
-
-    // Store in acceptances table
-    await supabaseRequest('POST', 'acceptances', {
-      roa_token: brokerToken + '-' + Date.now(),
-      client_name: clientName,
-      client_email: clientEmail,
-      broker_token: brokerToken,
-      acceptance_token: acceptanceToken,
-      roa_content: cleanedRoA,
-      expires_at: expiresAt,
-      accepted_at: null
-    });
-
-    // Build acceptance URL
-    const acceptanceUrl = 'https://riya-pilot.netlify.app/accept.html?token=' + acceptanceToken;
-
-    // Send email to client with full RoA + acceptance button
-    const { sendRoAToClient } = require('./resend_helper');
-    const emailResult = await sendRoAToClient(clientEmail, clientName, brokerName || broker.name, roaContent, brokerToken, acceptanceUrl, triggerLabel, adviceDate);
-
-    if (!emailResult.success) {
-      return res.status(500).json({ error: 'Failed to send email: ' + emailResult.error });
-    }
-
-    return res.json({
-      success: true,
-      message: 'RoA emailed to ' + clientEmail + ' with acceptance link.',
-      acceptance_url: acceptanceUrl,
-      expires_at: expiresAt
-    });
-
-  } catch (err) {
-    console.error('send-roa-to-client error:', err);
-    res.status(500).json({ error: 'Failed to send RoA to client.', detail: err.message });
-  }
-});
-
-
-// GET /accept-roa
-// Called when client clicks acceptance link — returns RoA content for display
-app.get('/accept-roa', async (req, res) => {
-  try {
-    const { token } = req.query;
-    if (!token) return res.status(400).json({ error: 'Token required.' });
-
-    const result = await supabaseRequest('GET', 'acceptances?acceptance_token=eq.' + encodeURIComponent(token) + '&select=*');
-    if (!result || !result.length) {
-      return res.status(404).json({ error: 'Acceptance link not found or expired.' });
-    }
-
-    const record = result[0];
-
-    // Check expiry
-    if (record.expires_at && new Date(record.expires_at) < new Date()) {
-      return res.status(410).json({ error: 'This acceptance link has expired. Please contact your broker for a new link.' });
-    }
-
-    // Check if already accepted
-    if (record.accepted_at) {
-      return res.json({
-        success: true,
-        already_accepted: true,
-        client_name: record.client_name,
-        accepted_at: record.accepted_at,
-        message: 'This Record of Advice was already accepted on ' + new Date(record.accepted_at).toLocaleDateString('en-ZA') + '.'
-      });
-    }
-
-    return res.json({
-      success: true,
-      already_accepted: false,
-      client_name: record.client_name,
-      client_email: record.client_email,
-      broker_token: record.broker_token,
-      roa_content: record.roa_content,
-      expires_at: record.expires_at
-    });
-
-  } catch (err) {
-    console.error('accept-roa GET error:', err);
-    res.status(500).json({ error: 'Failed to load acceptance record.', detail: err.message });
-  }
-});
-
-
-// POST /accept-roa
-// Called when client clicks "I Accept" button
-app.post('/accept-roa', async (req, res) => {
-  try {
-    const { token, clientName, clientEmail } = req.body;
-    if (!token) return res.status(400).json({ error: 'Token required.' });
-
-    const result = await supabaseRequest('GET', 'acceptances?acceptance_token=eq.' + encodeURIComponent(token) + '&select=*');
-    if (!result || !result.length) {
-      return res.status(404).json({ error: 'Acceptance link not found.' });
-    }
-
-    const record = result[0];
-
-    if (record.accepted_at) {
-      return res.json({ success: true, already_accepted: true, accepted_at: record.accepted_at });
-    }
-
-    if (record.expires_at && new Date(record.expires_at) < new Date()) {
-      return res.status(410).json({ error: 'This acceptance link has expired.' });
-    }
-
-    const acceptedAt = new Date().toISOString();
-    const ipAddress = req.headers['x-forwarded-for'] || req.connection.remoteAddress || 'unknown';
-
-    // Record acceptance
-    await supabaseRequest('PATCH', 'acceptances?acceptance_token=eq.' + encodeURIComponent(token), {
-      accepted_at: acceptedAt,
-      ip_address: ipAddress
-    });
-
-    // Notify broker
-    try {
-      const brokerResult = await supabaseRequest('GET', 'brokers?token=eq.' + encodeURIComponent(record.broker_token) + '&select=email,name');
-      if (brokerResult && brokerResult.length && brokerResult[0].email) {
-        const { Resend } = require('resend');
-        const resend = new Resend(process.env.RESEND_API_KEY);
-        await resend.emails.send({
-          from: 'Riya <hello@riya.co.za>',
-          to: brokerResult[0].email,
-          subject: 'RoA Accepted — ' + record.client_name,
-          html: `<div style="font-family:Calibri,Arial,sans-serif;max-width:600px;margin:0 auto;">
-            <div style="text-align:right;padding:16px 28px 8px;border-bottom:2px solid #C9A84C;">
-              <div style="color:#1B2A4A;font-size:15px;font-weight:bold;">AFRICA BLOOM (PTY) LTD  |  T/A RIYA</div>
-              <div style="color:#C9A84C;font-size:11px;">toelie@riya.co.za  |  www.riya.co.za</div>
-            </div>
-            <div style="padding:32px;background:#ffffff;">
-              <p style="color:#333;">Hi ${brokerResult[0].name || 'Adviser'},</p>
-              <p style="color:#333;"><strong style="color:#1B2A4A;">${record.client_name}</strong> has accepted the Record of Advice.</p>
-              <div style="background:#F4F6F4;border-left:4px solid #C9A84C;padding:16px;border-radius:3px;margin:16px 0;">
-                <div style="color:#1B2A4A;font-weight:bold;margin-bottom:4px;">Acceptance Details</div>
-                <div style="color:#333;font-size:13px;">Client: ${record.client_name}</div>
-                <div style="color:#333;font-size:13px;">Email: ${record.client_email}</div>
-                <div style="color:#333;font-size:13px;">Date: ${new Date(acceptedAt).toLocaleString('en-ZA')}</div>
-                <div style="color:#333;font-size:13px;">IP Address: ${ipAddress}</div>
-              </div>
-              <p style="color:#333;">This acceptance has been recorded in your Riya compliance record.</p>
-              <p style="color:#333;">Regards,<br/><strong>Riya</strong></p>
-            </div>
-            <div style="padding:12px 28px;border-top:2px solid #C9A84C;text-align:center;">
-              <span style="color:#C9A84C;font-size:9px;">Riya — Africa Bloom (Pty) Ltd  |  FAIS Act 37/2002  |  BN 80/2003  |  GN 706/2020</span>
-            </div>
-          </div>`
-        });
-      }
-    } catch (notifyErr) {
-      console.warn('Broker notification failed:', notifyErr.message);
-    }
-
-    // Auto-archive signed RoA to sonja@inbound.riya.co.za
-    try {
-      const { Resend } = require('resend');
-      const r = new Resend(process.env.RESEND_API_KEY);
-      await r.emails.send({
-        from: 'Riya <hello@riya.co.za>',
-        to: 'sonja@inbound.riya.co.za',
-        subject: 'Signed RoA - ' + record.client_name + ' (' + new Date(acceptedAt).toLocaleDateString('en-ZA') + ')',
-        text: record.roa_content || 'RoA content unavailable'
-      });
-      console.log('Auto-archived:', record.client_name);
-    } catch(ae) { console.warn('Sonja archive failed:', ae.message); }
-
-    return res.json({
-      success: true,
-      already_accepted: false,
-      accepted_at: acceptedAt,
-      message: 'Acceptance recorded successfully. Your broker has been notified.'
-    });
-
-    // Auto-archive signed RoA to sonja@inbound.riya.co.za
-    try {
-      const { Resend } = require('resend');
-      const r = new Resend(process.env.RESEND_API_KEY);
-      await r.emails.send({
-        from: 'Riya <hello@riya.co.za>',
-        to: 'sonja@inbound.riya.co.za',
-        subject: 'Signed RoA — ' + record.client_name + ' (' + new Date(acceptedAt).toLocaleDateString('en-ZA') + ')',
-        text: record.roa_content || 'RoA content unavailable'
-      });
-      console.log('Auto-archived to sonja@inbound.riya.co.za:', record.client_name);
-    } catch(ae) { console.warn('Sonja archive failed:', ae.message); }
-
-  } catch (err) {
-    console.error('accept-roa POST error:', err);
-    res.status(500).json({ error: 'Failed to record acceptance.', detail: err.message });
-  }
-});
-
-// ============================================================
-// END ELECTRONIC ACCEPTANCE ENDPOINTS
-// ============================================================
-
 
 app.listen(PORT, () => console.log('Riya backend listening on port ' + PORT));
 
