@@ -553,7 +553,7 @@ app.post('/generate-pdf', async (req, res) => {
 
       const headerY = doc.y;
       doc.moveTo(marginLeft, headerY + 26).lineTo(pageWidth - marginRight, headerY + 26).strokeColor(GOLD).lineWidth(1).stroke();
-      doc.fontSize(11).font('Helvetica-Bold').fillColor(NAVY)).text(
+      doc.fontSize(11).font('Helvetica-Bold').fillColor(NAVY).text(
         '  ' + section.number + '. ' + section.title.toUpperCase(),
         marginLeft, headerY + 7, { width: contentWidth }
       );
