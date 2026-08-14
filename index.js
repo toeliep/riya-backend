@@ -70,6 +70,27 @@ function forceHeadingLinebreaks(text) {
   out = out.replace(/\b([A-Z]{2,}(?:[\s,&/-]+[A-Z]{2,})*)([A-Z][a-z])/g, '$1\n$2');
   out = out.replace(/([^\n-])-{2,3}(\n|$)/g, '$1$2');
   out = out.replace(/^-{3,}\s*$/gm, '');
+  // Force line breaks before Afrikaans field labels
+  var afLabels = [
+    'Finansiele Diensverskaffer (FSP):',
+    'FSP-Registrasienommer:',
+    'Verteenwoordiger Naam:',
+    'Nakoming Beampte:',
+    'Beroepsaanspreeklikheidsversekering:',
+    'Advisdatum:',
+    'Klient Naam:',
+    'Identiteitsnommer:',
+    'Kontaknommer:',
+    'E-posadres:',
+    'Residensiele Adres:',
+    'Identiteitsverifikasie:',
+    'Adresbewys:',
+    'POPIA-Toestemming:',
+    'FICA-Status:',
+    'Eisgeskiedenisverklaring:',
+    'FAIS-Openbaarmaking:'
+  ];
+  afLabels.forEach(function(l) { out = out.split(l).join('\n' + l); });
   return out;
 }
 
