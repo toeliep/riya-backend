@@ -1167,6 +1167,13 @@ app.post('/send-roa-to-client', async (req, res) => {
     const acceptanceToken = require('crypto').randomUUID();
     const expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(); // 30 days
 
+    // Clean RoA text before storing — force newlines before section numbers
+    const cleanedRoA = (roaContent || '')
+      .replace(/OU[\s\S]*?Tsurance/g, 'OUTsurance')
+      .replace(/Ford Ranger (\d\.\d) TD[\s\n]*Ci/g, 'Ford Ranger $1 TDCi')
+      .replace(/([^\n])(\d{1,2}\. (?:FSP|CLIENT|NEEDS|MARKET|PRODUCT|REMUNERATION|REPLACEMENT|CLIENT ACCEPTANCE))/g, '$1\n\n$2')
+      .replace(/\n{3,}/g, '\n\n');
+
     // Store in acceptances table
     await supabaseRequest('POST', 'acceptances', {
       roa_token: brokerToken + '-' + Date.now(),
@@ -1174,7 +1181,7 @@ app.post('/send-roa-to-client', async (req, res) => {
       client_email: clientEmail,
       broker_token: brokerToken,
       acceptance_token: acceptanceToken,
-      roa_content: roaContent,
+      roa_content: cleanedRoA,
       expires_at: expiresAt,
       accepted_at: null
     });
