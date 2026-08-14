@@ -1171,7 +1171,7 @@ app.post('/send-roa-to-client', async (req, res) => {
     const cleanedRoA = (roaContent || '')
       .replace(/OU[\s\S]*?Tsurance/g, 'OUTsurance')
       .replace(/Ford Ranger (\d\.\d) TD[\s\n]*Ci/g, 'Ford Ranger $1 TDCi')
-      .replace(/(?<!\n)(?=[1-8]\. (?:FSP|CLIENT|NEEDS|MARKET|PRODUCT|REMUNERATION|REPLACEMENT|CLIENT ACCEPTANCE))/g, '\n\n')
+      .replace(/(?<!\n)(?=[1-8]\. (?:FSP|Client|Needs|Market|Product|Remuneration|Replacement|Client Acceptance))/gi, '\n\n')
       .replace(/\n{3,}/g, '\n\n');
 
     // Store in acceptances table
