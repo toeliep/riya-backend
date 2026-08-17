@@ -51,6 +51,8 @@ app.use(cors({ origin: '*' }));
 app.use(express.json({ limit: '50mb' }));
 
 function forceHeadingLinebreaks(text) {
+  // Fix OUTsurance name break before any other processing
+  text = text.replace(/OU[\r\n\s]*T[\r\n\s]*surance/g, 'OUTsurance').replace(/OU[\r\n\s]*T[\r\n\s]*bonus/g, 'OUTbonus');
   let out = text.replace(/#{1,3}\s*(?=\d{1,2}\.\s+[A-Z])/gi, '');
   const knownTitles = [
     'FSP AND REPRESENTATIVE DETAILS',
@@ -371,7 +373,7 @@ app.post('/generate-roa', async (req, res) => {
     // Pre-inject registration number if found in input
     const regMatch = user.match(/[Rr]egistration[:\s]+([A-Z]{2,3}\s*[\d-]+)/i);
     const regNote = regMatch ? '\n\nNOTE - VEHICLE REGISTRATION: The registration number is ' + regMatch[1].trim() + ' - this MUST appear verbatim in Section 5 vehicle details.' : '';
-    const user1 = user + regNote + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. Be concise - bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. Do not write anything beyond section 2 - end your response immediately after completing it, with no additional text or commentary. DO NOT include any --- separator lines or ## markdown.';
+    const user1 = user + regNote + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. IMPORTANT: In Section 1, the Communication Method field must list ALL methods stated in the input - if both face-to-face and email are mentioned, list both. Be concise - bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. Do not write anything beyond section 2 - end your response immediately after completing it, with no additional text or commentary. DO NOT include any --- separator lines or ## markdown.';
     let part1 = '';
 const lang = req.body.language || 'en';
     const activeSystemRoa = buildSystemRoa(user, lang);
