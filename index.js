@@ -368,7 +368,10 @@ app.post('/generate-roa', async (req, res) => {
       return res.json({ content: [{ type: 'text', text: rewritten }] });
     }
 
-    const user1 = user + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. Be concise - bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. Do not write anything beyond section 2 - end your response immediately after completing it, with no additional text or commentary. DO NOT include any --- separator lines or ## markdown.';
+    // Pre-inject registration number if found in input
+    const regMatch = user.match(/[Rr]egistration[:\s]+([A-Z]{2,3}\s*[\d-]+)/i);
+    const regNote = regMatch ? '\n\nNOTE - VEHICLE REGISTRATION: The registration number is ' + regMatch[1].trim() + ' - this MUST appear verbatim in Section 5 vehicle details.' : '';
+    const user1 = user + regNote + '\n\nGenerate ONLY sections 1 and 2. Stop after section 2. Be concise - bullet points only.\n1. FSP and Representative Details\n2. Client Identification, KYC, FICA and POPIA. Do not write anything beyond section 2 - end your response immediately after completing it, with no additional text or commentary. DO NOT include any --- separator lines or ## markdown.';
     let part1 = '';
 const lang = req.body.language || 'en';
     const activeSystemRoa = buildSystemRoa(user, lang);
@@ -391,8 +394,8 @@ const lang = req.body.language || 'en';
 
     // COMBINE WITHOUT SEPARATOR LINES
     let combined = (part1 + '\n\n' + part2 + '\n\n' + part3).trim();
-    combined = combined.replace(/OU\s*T\s*surance/g, 'OUTsurance');
-    combined = combined.replace(/OU\s*T\s*bonus/g, 'OUTbonus');
+    combined = combined.replace(/OU[\r\n\s]*T[\r\n\s]*surance/g, 'OUTsurance');
+    combined = combined.replace(/OU[\r\n\s]*T[\r\n\s]*bonus/g, 'OUTbonus');
 
     // Defensive fallback: guarantee a client + adviser signature block always exists
     const finalCombined = combined.includes('Client Signature:')
@@ -581,7 +584,7 @@ app.post('/generate-pdf', async (req, res) => {
           doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(line, marginLeft + 12, doc.y, { width: contentWidth - 12 });
           doc.moveDown(0.3);
         } else {
-          doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(line, marginLeft, doc.y, { width: contentWidth });
+          doc.fontSize(9.5).font('Helvetica').fillColor('#333333').text(line.replace(/(\d{2,4})\s+(\d{2,4})/g, '$1$2'), marginLeft, doc.y, { width: contentWidth });
           doc.moveDown(0.3);
         }
       }
