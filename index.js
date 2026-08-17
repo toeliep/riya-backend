@@ -530,7 +530,7 @@ app.post('/generate-pdf', async (req, res) => {
       .join('\n');
 
     const sections = [];
-    const sectionRegex = /(?:^|\n)(\d{1,2})\.\s+([A-Z][^\n]{2,80})/g;
+    const sectionRegex = /(?:^|\n)([1-9])\.\s+([A-Z][^\n]{2,80})/g;
     let match;
     const matches = [];
     while ((match = sectionRegex.exec(normalized)) !== null) {
