@@ -522,7 +522,10 @@ app.post('/generate-pdf', async (req, res) => {
     // ===== ROBUST SECTION PARSING =====
     // Apply the same heading-repair used in RoA generation, so any run-on
     // heading (e.g. "DETAILSFinancial...") is split before parsing sections.
-    const sanitized = text.replace(/(\d{2})\s*\n\s*(\d{2,3})/g, '$1$2');
+    const sanitized = text
+      .replace(/(\d{2})\s*\n\s*(\d{2,3})/g, '$1$2')
+      .replace(/OU[\r\n\s]*T[\r\n\s]*surance/g, 'OUTsurance')
+      .replace(/OU[\r\n\s]*T[\r\n\s]*bonus/g, 'OUTbonus');
     const repaired = forceHeadingLinebreaks(sanitized);
     // Strip any leading whitespace and stray markdown before each line first,
     // so indentation or leftover '#'/'##' never causes a silent zero-match.
