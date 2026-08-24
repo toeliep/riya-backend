@@ -308,10 +308,7 @@ app.post('/generate-roa', async (req, res) => {
       let nonEmptyFieldCount = 0;
       let totalFieldCount = 0;
       try {
-        let clean = result.replace(/```json|```/g, '').trim();
-        const jsonStart = clean.indexOf('{');
-        const jsonEnd = clean.lastIndexOf('}');
-        if (jsonStart !== -1 && jsonEnd !== -1) clean = clean.substring(jsonStart, jsonEnd + 1);
+        const clean = result.replace(/```json|```/g, '').trim();
         const parsed = JSON.parse(clean);
         parsedOk = true;
         totalFieldCount = Object.keys(parsed).length;
