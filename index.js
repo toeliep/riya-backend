@@ -629,9 +629,10 @@ app.post('/generate-pdf', async (req, res) => {
       );
       doc.y = headerY + 34;
  
-      const lines = section.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const lines = section.content.split('\n').map(l => l.trim());
       for (const line of lines) {
         if (doc.y > doc.page.height - 60) { doc.addPage(); doc.y = 45; }
+        if (line.length === 0) { doc.moveDown(0.4); continue; }
         const isBullet = /^[•\-\*]\s+/.test(line);
         const isSubHeading = /^[A-Z][A-Za-z\s&/()-]*:\s*$/.test(line) && line.length < 70;
  
