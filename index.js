@@ -95,7 +95,7 @@ function forceHeadingLinebreaks(text) {
     var re = new RegExp('([^\n])(' + l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'g');
     out = out.replace(re, '$1\n$2');
    });
-  out = out.replace(/([^\n])([A-Z]{3,}(?:\s+[A-Z]{2,}){1,})/g, '$1\n$2');
+  
   out = out.replace(/(\d{1,}[,.]?\d*)\s*\n\s*(\d{2,})/g, '$1$2');
   out = out.replace(/(_{10,})(Client|Adviser|Date)/g, '$1\n$2');
   var afLabels = [
