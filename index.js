@@ -553,7 +553,7 @@ app.post('/generate-pdf', async (req, res) => {
       .join('\n');
  
     const sections = [];
-    const sectionRegex = /(?:^|\n)([1-8])\.\s+((?:FSP|CLIENT|NEEDS|MARKET|PRODUCT|REMUNERATION|REPLACEMENT|KLIENT|BEHOEFTE|MARK|AANBEVOLE|VERGOEDING|VERVANG|FSP-|FINANSIELE)[^\n]{0,80})/g;
+    const sectionRegex = /\n([1-8])\.\s+((?:FSP|CLIENT|NEEDS|MARKET|PRODUCT|REMUNERATION|REPLACEMENT|KLIENT|BEHOEFTE|MARK|AANBEVOLE|VERGOEDING|VERVANG|FSP-|FINANSIELE)[^\n]{0,80})/g;
     let match;
     const matches = [];
     while ((match = sectionRegex.exec(normalized)) !== null) {
