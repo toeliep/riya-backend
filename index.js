@@ -589,7 +589,12 @@ app.post('/generate-pdf', async (req, res) => {
       );
       doc.y = headerY + 34;
  
-      const lines = section.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+            const rawLines = section.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const lines = [];
+      for (const l of rawLines) {
+        const split = l.replace(/([a-z%.])([A-Z])/g, '$1\n$2').replace(/([a-z%.]) ([A-Z][A-Z])/g, '$1\n$2');
+        split.split('\n').forEach(s => { if (s.trim()) lines.push(s.trim()); });
+      }
       for (const line of lines) {
         if (doc.y > doc.page.height - 60) { doc.addPage(); doc.y = 45; }
         const isBullet = /^[•\-\*]\s+/.test(line);
