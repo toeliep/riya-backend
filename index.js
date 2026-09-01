@@ -499,7 +499,7 @@ app.post('/generate-pdf', async (req, res) => {
     const contentWidth = pageWidth - marginLeft - marginRight;
  
     // ===== HEADER =====
-    doc.rect(0, 0, pageWidth, 80).fill(NAVY);
+    doc.rect(0, 0, pageWidth, 90).fill(NAVY);
     doc.fontSize(22).font('Helvetica-Bold').fillColor('#FFFFFF').text('RECORD OF ADVICE', 0, 18, { align: 'center' });
     doc.fontSize(10).font('Helvetica').fillColor(GOLD).text(
       'FAIS & GCoC Compliant  |  ' + (adviceDate || new Date().toLocaleDateString('en-ZA')),
@@ -523,17 +523,17 @@ app.post('/generate-pdf', async (req, res) => {
       if (logoConfig) {
         const logoPath = __dirname + '/assets/' + logoConfig.file;
         if (fs.existsSync(logoPath)) {
-          doc.image(logoPath, pageWidth - marginRight - logoConfig.width, 90, {
+                  doc.image(logoPath, pageWidth - marginRight - logoConfig.width, 8, {
             width: logoConfig.width, height: logoConfig.height, fit: [logoConfig.width, logoConfig.height]
           });
-          hasLogo = true;
+          hasLogo = true; 
         }
       }
     } catch (logoErr) {
       console.warn('Logo error:', logoErr.message);
     }
  
-    doc.y = hasLogo ? 145 : 95;
+    doc.y = 105;
  
     // ===== ROBUST SECTION PARSING =====
     // Apply the same heading-repair used in RoA generation, so any run-on
