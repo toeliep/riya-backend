@@ -72,7 +72,7 @@ function forceHeadingLinebreaks(text) {
   out = out.replace(/\b([A-Z]{2,}(?:[\s,&/-]+[A-Z]{2,})*)([A-Z][a-z])/g, '$1\n$2');
   out = out.replace(/([^\n-])-{2,3}(\n|$)/g, '$1$2');
   out = out.replace(/^-{3,}\s*$/gm, ''); 
-  out = out.replace(/([a-z])([A-Z][a-z]+(?: [A-Z][a-z]+){1,4})([A-Z])/g, '$1\n$2\n$3');
+  
   // Force line breaks before Afrikaans field labels
   var afLabels = [
     'Finansiele Diensverskaffer (FSP):',
