@@ -69,71 +69,10 @@ function forceHeadingLinebreaks(text) {
   out = out.replace(new RegExp('([^\\n])' + '(\\d{1,2}\\.\\s+(?:' + titleAlt + '))', 'gi'), '$1\n\n$2');
   out = out.replace(headingRe, '$1\n');
   out = out.replace(/([^\n])(\d{1,2}\.\s+[A-Z][A-Z\s,&/-]{4,})/g, '$1\n\n$2');
-    out = out.replace(/\b([A-Z]{2,}(?:[\s,&/-]+[A-Z]{2,})*)([A-Z][a-z])/g, function(m, p1, p2) { if (/^(HCV|MCV|LDV|PMV|GIT|RTA|SAPS|KYC|FICA|POPIA|FAIS|SASRIA|COMESA|FSP|TPL|RoA|VIN|RMS|ICABS|OUTsurance)$/.test(p1)) return m; return p1 + '\n' + p2; });
+  out = out.replace(/\b([A-Z]{2,}(?:[\s,&/-]+[A-Z]{2,})*)([A-Z][a-z])/g, '$1\n$2');
   out = out.replace(/([^\n-])-{2,3}(\n|$)/g, '$1$2');
   out = out.replace(/^-{3,}\s*$/gm, '');
-   out = out.replace(/([A-Za-z])(\d{1,2}\.\d{1,2}\s+[A-Z])/g, '$1\n$2');
-  var enLabels = [
-    // FSP & Representative
-    'Name of FSP', 'FSP License Number', 'FSP Registration Number', 'FSP Number',
-    'Name and Title of Representative', 'Representative Name', 'Representative Title',
-    'Representative Regulatory Status', 'Representative Designation',
-    'Professional Indemnity Insurance', 'Date of Advice', 'Type of Advice',
-    'Communication Method', 'Category',
-    // Client section
-    'Client Name', 'Client Type', 'Entity Type', 'Business Classification',
-    'Client Identification', 'Identity Verification Status', 'ID Verification Status',
-    'Proof of Address Status', 'Proof of Address', 'POPIA Consent Status',
-    'FAIS Disclosure Acknowledgement', 'Claims History Declaration',
-    'Know Your Client', 'Financial Intelligence Centre', 'FAIS Compliance Disclosure',
-    'Protection of Personal Information', 'POPIA Act', 'Broker Undertaking',
-    // Needs Analysis
-    'Motor Vehicle Fleet', 'Goods in Transit Cover', 'Goods In Transit Cover',
-    'Fleet Composition', 'Tracking and Risk Management', 'Excess Structure',
-    'Motor Cover Sections', 'Named Driver Register', 'Vehicle Safety',
-    'Agreed Value Principle', 'Alteration of Risk', 'Claims Notification',
-    'Tracking Requirements', 'Tracking System', 'Tracking and Operative Safeguards',
-    'Conditions That May Result', 'Liabilities and Extensions', 'Additional Products',
-    'Risk Profile and Claims', 'Sub-Contractor Arrangements', 'Hazardous Goods',
-    'Statutory Liability', 'Static Risk Limit', 'Replacement Advice',
-    // Product Recommended
-    'Insurer and Policy Details', 'Insurer and Cover Class', 'Insurer',
-    'Policy Number', 'Premium', 'Cover Basis', 'Operative Date', 'Commencement Date',
-    'Fleet Schedule', 'Fleet Composition and Sum Insured',
-    'Heavy Commercial Vehicles', 'Trailers', 'Total Fleet Sum Insured',
-    'Basis of Indemnification', 'Standard Limit', 'Enhanced Limit',
-    'Claims Notification Requirements', 'Fire Extinguisher Condition',
-    'Material Change Obligation', 'Material Alteration Obligation',
-    'Cross-Border Cover', 'Motor Cover Sections Included',
-    'Vehicle Requirements and Compliance', 'Non-Compliance Risk',
-    'SASRIA Cover', 'Exclusions and Warranties', 'Exclusions',
-    'Liabilities Cover', 'Liabilities Not Included', 'Other Products',
-    'No Sub-Contractor Operations', 'Hazchem and Spillage Cover',
-    // Remuneration
-    'Commission Structure', 'Remuneration Basis', 'Remuneration Structure',
-    'Client Cost', 'Conflict of Interest Declaration', 'Financial Interest Disclosure',
-    'Compliance Declaration', 'Professional Indemnity Insurance',
-    // Replacement
-    'Replacement Status', 'Market Exercise',
-    // Acceptance
-    'Client Details', 'Date of Advice', 'Method of Communication',
-    'Client Acceptance', 'Method of Acceptance', 'Key Discussion Points',
-    'Confirmation of Client Understanding', 'KYC/FICA/POPIA Status',
-    'Documentation and Discussion Points', 'Documentation Provided',
-    'Client Instructions', 'Advice Validity', 'Outstanding Items',
-    'Claims History Declared', 'Risk Profile Assessment', 'Risk Profile Verification',
-    'No Material Change Declared', 'Additional Confirmations',
-    'Record Retention', 'Data Protection and Privacy',
-    'Insurance Intermediary Authority', 'Adviser Disclosure',
-    'Broker Remuneration', 'Insurer Financial Strength',
-  ];
-  enLabels.forEach(function(l) {
-    var re = new RegExp('([^\n])(' + l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'g');
-    out = out.replace(re, '$1\n$2');
-   });
-  
-  out = out.replace(/(\d{1,}[,.]?\d*)\s*\n\s*(\d{2,})/g, '$1$2');
-  out = out.replace(/(_{10,})(Client|Adviser|Date)/g, '$1\n$2');
+  // Force line breaks before Afrikaans field labels
   var afLabels = [
     'Finansiele Diensverskaffer (FSP):',
     'FSP-Registrasienommer:',
@@ -197,7 +136,7 @@ app.use((req, res, next) => {
   next();
 });
  
-const SYSTEM_ROA = "You are Riya, an expert South African FAIS compliance assistant. You produce professional, FAIS-compliant Records of Advice for South African short-term insurance brokers under the FAIS Act 37 of 2002, Board Notice 80 of 2003, and General Notice 706 of 2020.\nProduce a complete, professional RoA covering ALL of the following sections:\n1. FSP and Representative Details\n2. Client Identification and KYC/FICA/POPIA confirmation\n3. Needs Analysis - detailed risk profile and identified needs per asset category\n4. Market Comparison - all three insurers compared with reasons for recommendation\n5. Product Recommended - full Section 9(1) statutory detail including exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest declaration\n7. Replacement Advice (if applicable)\n8. Client Acceptance Record\nBe thorough and substantive. Use clear numbered headings. CRITICAL FORMATTING: every sub-heading or field label within a section MUST start on its own new line with a blank line before it — never run a sub-heading onto the same line as preceding body text. Write in professional English suitable for FSCA inspection. Do not cite case law. Do NOT use markdown tables - use labeled paragraphs and bullet points instead. CRITICAL LEGAL CITATIONS — always use these exact references: Financial Intelligence Centre Act 38 of 2001 (NOT 2020, NOT 1986); FAIS Act 37 of 2002; Short-Term Insurance Act 53 of 1998; POPIA Act 4 of 2013; Board Notice 80 of 2003; General Notice 706 of 2020. CRITICAL: Do NOT insert any '---' separator lines or '##' markdown characters anywhere in the output. Only use section numbers (1. 2. 3. etc) as headings. Never add separator lines.";
+const SYSTEM_ROA = "You are Riya, an expert South African FAIS compliance assistant. You produce professional, FAIS-compliant Records of Advice for South African short-term insurance brokers under the FAIS Act 37 of 2002, Board Notice 80 of 2003, and General Notice 706 of 2020.\nProduce a complete, professional RoA covering ALL of the following sections:\n1. FSP and Representative Details\n2. Client Identification and KYC/FICA/POPIA confirmation\n3. Needs Analysis - detailed risk profile and identified needs per asset category\n4. Market Comparison - all three insurers compared with reasons for recommendation\n5. Product Recommended - full Section 9(1) statutory detail including exclusions, excess structure, SASRIA\n6. Remuneration and Conflict of Interest declaration\n7. Replacement Advice (if applicable)\n8. Client Acceptance Record\nBe thorough and substantive. Use clear numbered headings. Write in professional English suitable for FSCA inspection. Do not cite case law. Do NOT use markdown tables - use labeled paragraphs and bullet points instead. CRITICAL LEGAL CITATIONS — always use these exact references: Financial Intelligence Centre Act 38 of 2001 (NOT 2020, NOT 1986); FAIS Act 37 of 2002; Short-Term Insurance Act 53 of 1998; POPIA Act 4 of 2013; Board Notice 80 of 2003; General Notice 706 of 2020. CRITICAL: Do NOT insert any '---' separator lines or '##' markdown characters anywhere in the output. Only use section numbers (1. 2. 3. etc) as headings. Never add separator lines.";
  
 const AGRI_GUIDANCE = " ADDITIONAL AGRICULTURAL RISK GUIDANCE - this input involves a farming/agricultural operation. Apply the following South African agri-insurance domain knowledge: NEEDS ANALYSIS must establish, where the input provides it: the type of farming operation (crop, livestock, mixed, or game farming); crop type(s) and hectares under cultivation per field, and whether dryland or irrigated (this materially changes risk); livestock type and numbers if applicable; storage/processing facilities (silos, cold storage, packhouses) and capacity; existing risk mitigation such as hail netting, irrigation backup, or security measures; historical claims/hail damage history, since this is a major underwriting factor in South African crop insurance; farm labour numbers for Employers Liability relevance; and whether the farm has broader commercial exposures beyond crop - buildings, machinery, irrigation infrastructure, business interruption. PRODUCT RECOMMENDED / SECTION 9(1) CONVENTIONS FOR CROP COVER: sum insured for crop cover is normally structured PER FIELD via a Cropping Plan (field name, crop and variety, hectares planted, sowing date, emergence date, average yield per hectare, value per ton, sum insured per field) rather than one blanket figure - reflect this structure if the input describes multiple fields or crop types. Crop cover is typically a NAMED PERIL structure with hail as the base peril, extended to include fire, lightning, flood, frost and windstorm as stated in the schedule - specify which perils are actually included based on the input, do not assume all are included unless stated. The deductible for crop cover is normally expressed as a PERCENTAGE of the value at risk, not a flat rand amount. If the cover is revenue-based rather than yield-based, note the distinction: yield cover guarantees a minimum tonnage per hectare; revenue-based cover guarantees a portion of the revenue the farmer would have earned, typically linked to Safex futures pricing - only state which basis applies if the input specifies it, otherwise do not assume. STANDARD CROP EXCLUSIONS to reference where relevant and not otherwise stated as covered: drought (never covered under standard crop policies, including irrigation equipment breakdown); Fall Army Worm and other controllable pests, diseases or weeds; consequential loss of any kind; harvested crops and crops in transit; earth movement; nuclear pollution; war and terrorism; infectious disease. SPECIAL CONDITIONS commonly required for crop cover: the insured must keep written farming log-books/records for the insurance period; the insured must offer ALL fields under cultivation for insurance, not selectively insure only high-risk fields; loss must be reported in writing within 48 hours of occurrence; the insurer has a right of inspection. BROADER FARM RISK - if the input describes exposures beyond crop cover, use the correct South African agri-insurance class names rather than generic commercial wording: Buildings Combined (farm structures); Business Interruption (specify basis if stated: Gross Profit, Gross Rentals, or Revenue); Machinery Breakdown, and resulting Loss of Profits if applicable; Deterioration of Stock (relevant for cold storage/produce); Transit - note that livestock, pedigreed animals, game and ostriches are typically insured under a SEPARATE transit class from general goods, do not merge them; Live Stock - Herd cover for livestock as an asset class in its own right, separate from crop; Spray Irrigation Systems (wheel-move and center pivot systems are a distinct equipment class from general machinery); Public Liability and Employers Liability. Only include a class if the input actually describes that exposure - do not invent buildings, machinery, or livestock cover that was not mentioned. SASRIA - state SASRIA cover concisely and confidently as a standard statutory inclusion under the Short-Term Insurance Act 53 of 1998, integrated into the quoted premium at no separate additional charge, covering riot, strike, civil commotion, malicious damage and terrorism - the same direct, one-paragraph treatment used for non-agri commercial products. Do NOT phrase this as something the insurer 'has confirmed' or attribute a specific verification statement to the insurer. Do NOT invent specific claims-handling conditions, precautionary requirements, or procedural detail for SASRIA claims that is not present in the input - if no such detail was provided, do not add any.";
  
@@ -212,26 +151,11 @@ function isAgriContent(text) {
   ];
   return keywords.some(k => t.includes(k));
 }
-const HCV_GIT_KEYWORDS = [
-  'truck', 'trailer', 'hcv', 'heavy commercial', 'fleet', 'transport company',
-  'goods in transit', 'git', 'conveyance limit', 'haulage', 'freight', 'cargo',
-  'logistics', 'sub-contractor', 'subcontractor', 'tanker', 'flatdeck',
-  'horse and trailer', 'interlink', 'semitrailer', 'semi-trailer'
-];
-
-function isHcvGitContent(text) {
-  if (!text) return false;
-  const t = text.toLowerCase();
-  return HCV_GIT_KEYWORDS.some(k => t.includes(k));
-}
-
-const HCV_GIT_GUIDANCE = " ADDITIONAL HCV/GIT COMMERCIAL TRANSPORT GUIDANCE — this input involves heavy commercial vehicles, goods in transit, or a commercial transport/freight operation. Apply the following domain knowledge to produce a complete, professional HCV/GIT RoA:\n\nSECTION 3 — NEEDS ANALYSIS (HCV/GIT): The needs analysis must cover ALL of the following where the input provides the information:\n\n3A. FLEET VERIFICATION AND BASIS OF INDEMNIFICATION: State the fleet composition (number of trucks and trailers), total agreed/retail value, and the basis of indemnification (Retail Value, Market Value, or Agreed Value) per vehicle category (HCV, Trailers, LDV, PMV, Special types). Confirm: vehicles hired out or hired in and interest endorsements noted; tracking system confirmed including double tracking on high-risk vehicles; named driver register — note that each driver listed on the named driver register is entitled to R10,000 Personal Accident benefit at no additional cost; driver medical checks AND eye tests — both must be separately confirmed; pre-start vehicle checklists — confirmed in place and whether digital or physical format; own vehicle servicing AND own accident repairs — both separately confirmed with RTA compliance risk noted; finance houses noted for endorsement where applicable.\n\n3B. EXCESS STRUCTURE: State the full excess structure by vehicle category — HCV, Trailers, PMV, LDV, Special types — each with Own Damage/Hijack/Theft excess. List penalty/additional excesses separately: capsizing whilst tipping, nighttime driving (22:00-04:00), driver age and licence tenure less than 3 years, windscreen, theft of tyres, extension excesses.\n\n3C. MOTOR COVER SECTIONS DISCUSSED: Address each of the following where applicable — Cross-Border travel (countries/corridors and specific vehicles noted); Cross-Border Riot and Strike (not automatically included, covers civil commotion outside SA only, excludes politically motivated riots, additional premium applies); Cross-Border Accidental Towing (covers repatriation to SA following insured accident only — does NOT apply to breakdowns or mechanical failure); Motor Third Party Liability (standard TPL limit and whether extended TPL taken, note that most SA policies exclude TPL in COMESA/coupon countries — insured must arrange compulsory coupon at border); Windscreen Cover; Mechanical Breakdown Towing (covers towing to closest place of safety following mechanical/electrical breakdown — does NOT cover accidents); Credit Shortfall; Deposit Protector; Trailer Combination Clause (allows entire combination to be treated as total loss when one trailer is beyond economic repair while operating together — each trailer still settled individually on own sum insured, excess applies separately per trailer); Loss of Use/Downtime Cover; Car Hire for LDVs and PMVs; Group Personal Accident; Business All Risks; Static Risk Limit (maximum total insured value at one location at one time — whether supplementary cover required); Tracking Requirements as policy condition (vehicles with insured value of R200,000 or more must have approved operative tracking and recovery device; 14-day grace period; testing frequency per specific insurer policy wording — commonly every 90 days or every 6 months).\n\n3D. GOODS IN TRANSIT (GIT) COVER: Address all three conveyance limits — A) maximum value any one load, B) annual haulage fees previous financial year, C) estimated/projected annual haulage fees current year. State whether All Risk or Limited Cover applies. Address: shipping containers in transporter custody — classified as bailee liability, Limited Cover basis only unless specifically agreed with insurer; commodity breakdown with percentages; driver fidelity cover; refrigerated goods cover; overloading tolerance percentage; Transporter Legal Liability (NOT automatically included in all GIT policies — some cargo owners contractually require this); temporary storage limits (GIT covers storage incidental to transit only — typically 72 hours, beyond this requires separate warehouseman cover); GIT excess structure and reducers; warranties, exclusions, and special conditions.\n\n3E. CONTINGENT LIABILITY (if sub-contractors used): Confirm sub-contractor use. Explain Contingent Liability Cover — covers transporter contractual liability for loss/damage to goods carried by sub-contractor where sub-contractor own insurance does not respond. State estimated annual haulage fees to sub-contractors. State insured warranty — insured must vet all sub-contractors and confirm active, adequate GIT cover at prescribed intervals.\n\n3F. HAZCHEM SPILLAGE AND CLEAN-UP (if hazardous goods transported): State liability limits, excess structure, emergency procedures and Hazcall confirmation. State statutory compliance warning — valid permits, driver training, signage, spill kits, approved fire-extinguishing equipment are mandatory.\n\n3G. LIBRA GOSURE (if applicable): Address GoSure Liabilities bundle, First-Party Extensions (Cyber Incidents, K&R, Commercial Crime), GoSure Enviro (does NOT cover Hazchem spills). State client decision — Accepted/Declined/To consider.\n\n3H. LIABILITIES DISCUSSED: For each cover state whether offered, accepted/declined, and limit: Public Liability; Tool of Trade; Work Away; Employers Liability; Directors and Officers; Passenger Liability; Unauthorised Passenger Liability; Fare-Paying Passenger Liability; Kidnap and Ransom; Cybercrime; Warehouseman Liability; Freight Forwarders Liability; Site Sudden and Accidental Pollution.\n\n3I. OTHER PRODUCTS: State offered/accepted/not applicable for each: Trade Credit Insurance; Fuel Guarantees; Tax Risk Insurance (professional fees only — does NOT cover SARS penalties, fines, or interest).\n\n3J. PRODUCT REPLACEMENT (if applicable): State reason for replacement, confirm comparison done and kept on file, confirm client informed of implications, confirm client accepts replacement.\n\nSECTION 5 — PRODUCT RECOMMENDED (HCV/GIT SPECIFIC DISCLOSURES): Include ALL of the following:\n\nAGREED VALUE PRINCIPLE: The agreed value must be set at inception and revised annually. Agreed value shall not exceed retail value (TransUnion/Mead and McGrouther) plus maximum percentage allowed by the insurer. If not revised, settlement shall not exceed current retail value at last renewal plus extras.\n\nFIRE EXTINGUISHER CONDITION: All HCVs, MCVs, and plant items must be fitted with a minimum 9 kg dry powder fire extinguisher. This is a condition of cover — non-compliance may result in claim rejection.\n\nALTERATION OF RISK OBLIGATION: Any material change in the risk must be immediately reported to the broker/insurer. Material changes include: new vehicles or routes, change in commodities, change in sub-contractor arrangements, change in driver complement, or change in operating area.\n\nCLAIMS NOTIFICATION REQUIREMENTS: General claims — not later than 30 days. Theft/hijacking — within 2 working days, also report immediately to tracking supplier. SAPS — within 24 hours. Legal notices — immediately forward to broker/insurer.\n\nTRACKING REQUIREMENTS: Vehicles with insured value of R200,000 or more must have approved operative tracking device. 14-day grace period at inception. Testing frequency per specific insurer policy wording — commonly every 90 days or 6 months. Theft/hijacking must be reported immediately to tracking supplier.\n\nHCV CONDITIONS THAT MAY RESULT IN CLAIM REPUDIATION: No tracking device; non-compliance with RTA (roadworthiness, licences, load mass); premiums not paid; incorrect territorial limits; non-disclosure of claims history; non-disclosure of load types or subcontracted loads; late notification.\n\nGIT CONDITIONS THAT MAY RESULT IN CLAIM REPUDIATION: Incorrect packaging/stowage; non-disclosure of commodities or sub-contracted loads; late notification; no tracking device; incorrect territorial limits; non-compliance with RTA; defective/non-waterproof tarpaulins; overloading.\n\nSECTION 8 — DOCUMENTATION AND DISCUSSION POINTS: Confirm: RMS Call Centre and ICABS presented and discussed; Risk and Accident Report discussed (Libra Assist: 021 202 3441, 24/7 Helpline: 086 100 7777); recovery and favour recovery reports supplied and discussed; favour recovery fee form provided and signed; policy fee form provided and signed; market exercise offered to client; client birthday and referrals noted."; 
-function buildSystemRoa(userText, language) {
-  const base = language === 'af' ? SYSTEM_ROA_AF : SYSTEM_ROA;
+ 
+function buildSystemRoa(userText, language) {  const base = language === 'af' ? SYSTEM_ROA_AF : SYSTEM_ROA;
   const agri = language === 'af' ? AGRI_GUIDANCE_AF : AGRI_GUIDANCE;
   const rules = language === 'af' ? ACCURACY_RULES_AF : ACCURACY_RULES_EN;
   if (isAgriContent(userText)) return base + agri + rules;
-  if (isHcvGitContent(userText)) return base + HCV_GIT_GUIDANCE + rules;
   return base + rules;
 }
  
@@ -613,11 +537,10 @@ app.post('/generate-pdf', async (req, res) => {
     // ===== ROBUST SECTION PARSING =====
     // Apply the same heading-repair used in RoA generation, so any run-on
     // heading (e.g. "DETAILSFinancial...") is split before parsing sections.
-        const strippedText = text
-      .replace(/Generated by Riya[^\n]*/gi, '')
-      .replace(/Riya - FAIS RoA Automation Engine[^\n]*/gi, '')
-      .trim();
-    const sanitized = strippedText
+    const sanitized = text
+      .replace(/(\d{1,4})\s*\n\s*(\d{1,4})/g, '$1$2')
+      .replace(/OU[\r\n\s]*T[\r\n\s]*surance/g, 'OUTsurance')
+      .replace(/OU[\r\n\s]*T[\r\n\s]*bonus/g, 'OUTbonus');
     const repaired = forceHeadingLinebreaks(sanitized);
     // Strip any leading whitespace and stray markdown before each line first,
     // so indentation or leftover '#'/'##' never causes a silent zero-match.
@@ -643,7 +566,7 @@ app.post('/generate-pdf', async (req, res) => {
       const start = matches[i].index;
       const end = i + 1 < matches.length ? matches[i + 1].index : normalized.length;
       const headingLine = normalized.slice(start, end).split('\n')[0];
-      const content = normalized.slice(start + headingLine.length, end).replace(/^\n+/, '').replace(/\n+$/, '');
+      const content = normalized.slice(start + headingLine.length, end).trim();
       sections.push({ number: matches[i].number, title: matches[i].title, content });
     }
  
@@ -665,12 +588,11 @@ app.post('/generate-pdf', async (req, res) => {
       );
       doc.y = headerY + 34;
  
-      const lines = section.content.split('\n').map(l => l.trim());
+      const lines = section.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       for (const line of lines) {
         if (doc.y > doc.page.height - 60) { doc.addPage(); doc.y = 45; }
-        if (line.length === 0) { doc.moveDown(0.4); continue; }
         const isBullet = /^[•\-\*]\s+/.test(line);
-        const isSubHeading = (/^[A-Z][A-Za-z\s&/()-]*:\s*$/.test(line) && line.length < 80) || (/^[A-Z][A-Za-z\s&/(),-]{3,50}$/.test(line) && line.split(' ').length <= 7 && !/^(The|This|All|No|As|In|For|To|It|If|Any|Each|Where|Should)/.test(line));
+        const isSubHeading = /^[A-Z][A-Za-z\s&/()-]*:\s*$/.test(line) && line.length < 70;
  
         if (isSubHeading) {
           doc.moveDown(0.3);
