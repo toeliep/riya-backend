@@ -643,7 +643,7 @@ app.post('/generate-pdf', async (req, res) => {
       const start = matches[i].index;
       const end = i + 1 < matches.length ? matches[i + 1].index : normalized.length;
       const headingLine = normalized.slice(start, end).split('\n')[0];
-      const content = normalized.slice(start + headingLine.length, end).trim();
+      const content = normalized.slice(start + headingLine.length, end).replace(/^\n+/, '').replace(/\n+$/, '');
       sections.push({ number: matches[i].number, title: matches[i].title, content });
     }
  
@@ -670,7 +670,7 @@ app.post('/generate-pdf', async (req, res) => {
         if (doc.y > doc.page.height - 60) { doc.addPage(); doc.y = 45; }
         if (line.length === 0) { doc.moveDown(0.4); continue; }
         const isBullet = /^[•\-\*]\s+/.test(line);
-        const isSubHeading = /^[A-Z][A-Za-z\s&/()-]*:\s*$/.test(line) && line.length < 70;
+        const isSubHeading = (/^[A-Z][A-Za-z\s&/()-]*:\s*$/.test(line) && line.length < 80) || (/^[A-Z][A-Za-z\s&/(),-]{3,50}$/.test(line) && line.split(' ').length <= 7 && !/^(The|This|All|No|As|In|For|To|It|If|Any|Each|Where|Should)/.test(line));
  
         if (isSubHeading) {
           doc.moveDown(0.3);
