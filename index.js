@@ -553,7 +553,7 @@ app.post('/generate-pdf', async (req, res) => {
       .join('\n');
  
     const sections = [];
- const sectionRegex = /\n([1-8])\.\s+([^\n]{2,80})/g;
+     const sectionRegex = /\n([1-8])\.\s+([^\n]{2,80})/g;
     let match;
     const matches = [];
     while ((match = sectionRegex.exec(normalized)) !== null) {
@@ -589,7 +589,7 @@ app.post('/generate-pdf', async (req, res) => {
       );
       doc.y = headerY + 34;
  
-      const lines = section.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+      const rawLines = section.content.split('\n').map(l => l.trim()).filter(l => l.length > 0);
       for (const line of lines) {
         if (doc.y > doc.page.height - 60) { doc.addPage(); doc.y = 45; }
         const isBullet = /^[•\-\*]\s+/.test(line);
