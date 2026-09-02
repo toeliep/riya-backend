@@ -153,10 +153,12 @@ function isAgriContent(text) {
   return keywords.some(k => t.includes(k));
 }
  
-function buildSystemRoa(userText, language) {  const base = language === 'af' ? SYSTEM_ROA_AF : SYSTEM_ROA;
+function buildSystemRoa(userText, language) {
+  const base = language === 'af' ? SYSTEM_ROA_AF : SYSTEM_ROA;
   const agri = language === 'af' ? AGRI_GUIDANCE_AF : AGRI_GUIDANCE;
   const rules = language === 'af' ? ACCURACY_RULES_AF : ACCURACY_RULES_EN;
   if (isAgriContent(userText)) return base + agri + rules;
+  if (isHcvGitContent(userText)) return base + HCV_GIT_GUIDANCE + rules;
   return base + rules;
 }
  
