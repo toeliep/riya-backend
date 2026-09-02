@@ -482,20 +482,22 @@ app.post('/transcribe-voice', multerUpload.single('audio'), async (req, res) => 
     return res.status(500).json({ error: 'Transcription failed. Please try again.' });
   }
 });
-app.post('/generate-word', async (req, res) => {
+ app.post('/generate-word', async (req, res) => {
   const { text, clientName, fspName, triggerLabel, adviceDate, brokerToken } = req.body;
   if (!text) return res.status(400).json({ error: 'No text provided' });
   try {
     const { buildWordDoc } = require('./resend_helper');
-    const wordBuffer = await buildWordDoc(clientName || 'Client', fspName || 'FSP', text, brokerToken || '', adviceDate || new Date().toLocaleDateString('en-ZA'), triggerLabel || 'Record of Advice');
+    const { Packer } = require('docx');
+    const wordDoc = buildWordDoc(clientName || 'Client', fspName || 'FSP', text, brokerToken || '', adviceDate || new Date().toLocaleDateString('en-ZA'), triggerLabel || 'Record of Advice');
+    const buffer = await Packer.toBuffer(wordDoc);
     const filename = 'RoA-' + (clientName || 'Client').replace(/[^a-zA-Z0-9]/g, '') + '.docx';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
     res.setHeader('Content-Disposition', 'attachment; filename="' + filename + '"');
-    res.send(wordBuffer);
+    res.send(buffer);
   } catch(err) {
     res.status(500).json({ error: err.message });
   }
-}); 
+});
 app.post('/generate-pdf', async (req, res) => {
   const { text, clientName, fspName, triggerLabel, adviceDate, brokerToken } = req.body;
   if (!text) return res.status(400).json({ error: 'No text provided' });
