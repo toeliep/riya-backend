@@ -539,7 +539,7 @@ app.post('/generate-pdf', async (req, res) => {
     // Apply the same heading-repair used in RoA generation, so any run-on
     // heading (e.g. "DETAILSFinancial...") is split before parsing sections.
     const sanitized = text
-      .replace(/(\d{1,4})\s*\n\s*(\d{1,4})/g, '$1$2')
+      .replace(/(\d{1,4})\s*\n\s*(\d{1,4})(?!\.\s)/g, '$1$2')
       .replace(/OU[\r\n\s]*T[\r\n\s]*surance/g, 'OUTsurance')
       .replace(/OU[\r\n\s]*T[\r\n\s]*bonus/g, 'OUTbonus');
     const repaired = forceHeadingLinebreaks(sanitized);
