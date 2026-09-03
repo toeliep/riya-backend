@@ -56,7 +56,7 @@ function parseRoAContent(rawText) {
   let currentSection = null;
   let currentContent = [];
   for (const line of lines) {
-    const sectionMatch = line.match(/^([1-8])\.\s+(.+)/);
+    const sectionMatch = line.match(/^([1-8])\.\s+([A-Z][A-Z\s,&/()-]{3,})/);
     if (sectionMatch) {
       if (currentSection) sections.push({ title: currentSection, content: currentContent.join('\n').trim() });
       currentSection = line.trim();
