@@ -501,13 +501,18 @@ app.post('/transcribe-voice', multerUpload.single('audio'), async (req, res) => 
     return res.status(500).json({ error: 'Transcription failed. Please try again.' });
   }
 });
- app.post('/generate-word', async (req, res) => {
-  const { text, clientName, fspName, triggerLabel, adviceDate, brokerToken } = req.body;
-  if (!text) return res.status(400).json({ error: 'No text provided' });
+app.post('/generate-word', async (req, res) => {
+  const { text, roaJson, clientName, fspName, triggerLabel, adviceDate, brokerToken } = req.body;
+  if (!text && !roaJson) return res.status(400).json({ error: 'No text or JSON provided' });
   try {
-    const { buildWordDoc } = require('./resend_helper');
+    const { buildWordDoc, buildWordDocFromJson } = require('./resend_helper');
     const { Packer } = require('docx');
-    const wordDoc = buildWordDoc(clientName || 'Client', fspName || 'FSP', text, brokerToken || '', adviceDate || new Date().toLocaleDateString('en-ZA'), triggerLabel || 'Record of Advice');
+    let wordDoc;
+    if (roaJson && typeof roaJson === 'object') {
+      wordDoc = buildWordDocFromJson(roaJson, clientName || 'Client', fspName || 'FSP', brokerToken || '', adviceDate || new Date().toLocaleDateString('en-ZA'), triggerLabel || 'Record of Advice');
+    } else {
+      wordDoc = buildWordDoc(clientName || 'Client', fspName || 'FSP', text, brokerToken || '', adviceDate || new Date().toLocaleDateString('en-ZA'), triggerLabel || 'Record of Advice');
+    }
     const buffer = await Packer.toBuffer(wordDoc);
     const filename = 'RoA-' + (clientName || 'Client').replace(/[^a-zA-Z0-9]/g, '') + '.docx';
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
