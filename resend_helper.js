@@ -355,15 +355,34 @@ function buildWordDocFromJson(roaJson, clientName, brokerName, brokerToken, advi
   const GOLD = '#C9A84C';
   const children = [];
 
+  // Broker header
+  children.push(new Paragraph({
+    children: [new TextRun({ text: brokerName || 'Libra Insurance Brokers (Pty) Ltd', size: 28, bold: true, color: NAVY })],
+    spacing: { before: 200, after: 60 },
+  }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: 'FSP 9131  |  FAIS Act 37 of 2002  |  POPIA Act 4 of 2013', size: 18, color: '666666' })],
+    spacing: { after: 200 },
+  }));
+  children.push(new Paragraph({
+    border: { bottom: { color: NAVY, size: 6, space: 4, style: BorderStyle.SINGLE } },
+    spacing: { after: 200 },
+  }));
+
+  // RoA title
   children.push(new Paragraph({
     children: [new TextRun({ text: 'RECORD OF ADVICE', size: 40, bold: true, color: NAVY })],
     alignment: AlignmentType.CENTER,
     spacing: { before: 200, after: 100 },
   }));
   children.push(new Paragraph({
-    children: [new TextRun({ text: (triggerLabel || 'Record of Advice') + '  |  ' + (adviceDate || new Date().toLocaleDateString('en-ZA')), size: 20, color: GOLD })],
+    children: [new TextRun({ text: (triggerLabel || 'Record of Advice') + '  |  ' + clientName + '  |  ' + (adviceDate || new Date().toLocaleDateString('en-ZA')), size: 20, color: GOLD })],
     alignment: AlignmentType.CENTER,
     spacing: { after: 400 },
+  }));
+  children.push(new Paragraph({
+    border: { bottom: { color: NAVY, size: 6, space: 4, style: BorderStyle.SINGLE } },
+    spacing: { after: 300 },
   }));
 
   const sectionKeys = ['section1','section2','section3','section4','section5','section6','section7','section8'];
@@ -372,7 +391,7 @@ function buildWordDocFromJson(roaJson, clientName, brokerName, brokerToken, advi
     if (!section) return;
     children.push(new Paragraph({
       children: [new TextRun({ text: (idx + 1) + '. ' + (section.title || ''), bold: true, size: 24, color: NAVY })],
-      spacing: { before: 400, after: 80 },
+                spacing: { before: 80, after: 80 },
       border: { bottom: { color: GOLD, size: 6, space: 4, style: BorderStyle.SINGLE } },
     }));
     if (section.fields) {
