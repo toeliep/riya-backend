@@ -159,7 +159,26 @@ const SYSTEM_ROA_JSON = "You are Riya, a South African FAIS compliance assistant
 }
 
 const HCV_GIT_GUIDANCE = " ADDITIONAL HCV/GIT GUIDANCE - this input involves heavy commercial vehicles and/or goods in transit. Apply the following domain knowledge from Libra's LB-ROA-HCV-002 Rev 1.1: CRITICAL: Every sub-heading within Section 3 (such as MOTOR VEHICLE INSURANCE, GOODS IN TRANSIT, LIABILITIES, PUBLIC LIABILITY) must be on its own line followed by a blank line before the body text begins. Never run body text directly after a sub-heading on the same line.SECTION 3 NEEDS ANALYSIS must address each of the following where the input provides it, each on its own paragraph: (A) Fleet Verification - fleet composition by vehicle type (HCV/Trailers/LDV/PMV/Special types) with count and declared values; basis of indemnification (retail/market/agreed value); tracking system provider and whether trailers are tracked; named driver register and R10,000 PA benefit; driver medical checks and eye tests; pre-start checklists; own servicing and own accident repairs with RTA compliance implications; vehicles hired out or hired in with interest endorsements. (B) Goods in Transit - per conveyance limit; annual haulage fees (previous and projected); type of cover (All Risk vs Limited Cover); commodities carried with percentage breakdown; sub-contractor use and contingent liability exposure; overnight parking arrangements; driver fidelity cover; refrigerated goods cover if applicable. (C) Liabilities - Third Party Liability limit; GoSure bundle if offered; Unauthorised and Fare-Paying Passenger Liability; Freight Forwarders Liability if applicable. (D) Hazchem - only include if input explicitly states hazardous goods are transported. SECTION 5 PRODUCT RECOMMENDED: (i) State insurer name exactly as given in input - never anonymise to Alternative Insurer or Insurer One. (ii) Fleet schedule: list each vehicle category on its own line with count and sum insured. (iii) Excess structure: present each vehicle category with own damage excess, theft/hijack excess, and penalty excesses each on its own line. (iv) GIT excess structure separately. (v) Deposit premium structure: if 70/30 or 50/50 deposit premium is mentioned, explain the structure, claims cut-off ratio, secondary premium timing, and fund recovery mechanism. (vi) SASRIA: one paragraph, no invented procedural detail. (vii) Tracking requirement: state R200,000 threshold, 14-day grace period, and that theft excess is waived where tracking device is fitted and operational. SECTION 8 DISCLOSURES - always include at end: HCV claim repudiation conditions (no tracking device; non-compliance with Road Traffic Act; premiums not paid; incorrect territorial limits; non-disclosure of claims history; non-disclosure of loads conveyed; late notification of claims); GIT claim repudiation conditions (incorrect packaging and stowage; non-disclosure of commodities or sub-contracted loads; late notification; no tracking device; incorrect territorial limits; non-compliance with RTA; defective tarpaulins; overloading); Tracking requirements (R200,000 threshold; 14-day grace; device must be operational; report theft to tracking supplier immediately)."; 
-function buildSystemRoa(userText, language) {
+app.post('/generate-roa-json', async (req, res) => {
+  const { token, user, language } = req.body;
+  if (!token || !user) return res.status(400).json({ error: 'Missing token or user input' });
+  const brokerRow = await supabaseRequest('brokers?token=eq.' + token + '&select=*');
+  if (!brokerRow || brokerRow.length === 0) return res.status(401).json({ error: 'Invalid token' });
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey) return res.status(500).json({ error: 'API key not configured' });
+  try {
+    const systemPrompt = SYSTEM_ROA_JSON;
+    const rawJson = await callClaude(apiKey, systemPrompt, user, 4000);
+    const cleaned = rawJson.replace(/^```json\s*/i, '').replace(/```\s*$/i, '').trim();
+    const firstBrace = cleaned.indexOf('{');
+    const lastBrace = cleaned.lastIndexOf('}');
+    if (firstBrace === -1 || lastBrace === -1) throw new Error('No JSON found in response');
+    const roaJson = JSON.parse(cleaned.slice(firstBrace, lastBrace + 1));
+    res.json({ success: true, roa: roaJson });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});function buildSystemRoa(userText, language) {
   const base = language === 'af' ? SYSTEM_ROA_AF : SYSTEM_ROA;
   const agri = language === 'af' ? AGRI_GUIDANCE_AF : AGRI_GUIDANCE;
   const rules = language === 'af' ? ACCURACY_RULES_AF : ACCURACY_RULES_EN;
