@@ -350,4 +350,57 @@ async function sendRoAToClient(clientEmail, clientName, brokerName, roaContent, 
   }
 }
 
-module.exports = { sendWelcomeEmail, sendRoAEmail, sendRoAToClient, parseRoAContent, buildWordDoc };
+function buildWordDocFromJson(roaJson, clientName, brokerName, brokerToken, adviceDate, triggerLabel) {
+  const NAVY = '#1F3B6E';
+  const GOLD = '#C9A84C';
+  const children = [];
+
+  children.push(new Paragraph({
+    children: [new TextRun({ text: 'RECORD OF ADVICE', size: 40, bold: true, color: NAVY })],
+    alignment: AlignmentType.CENTER,
+    spacing: { before: 200, after: 100 },
+  }));
+  children.push(new Paragraph({
+    children: [new TextRun({ text: (triggerLabel || 'Record of Advice') + '  |  ' + (adviceDate || new Date().toLocaleDateString('en-ZA')), size: 20, color: GOLD })],
+    alignment: AlignmentType.CENTER,
+    spacing: { after: 400 },
+  }));
+
+  const sectionKeys = ['section1','section2','section3','section4','section5','section6','section7','section8'];
+  sectionKeys.forEach((key, idx) => {
+    const section = roaJson[key];
+    if (!section) return;
+    children.push(new Paragraph({
+      children: [new TextRun({ text: (idx + 1) + '. ' + (section.title || ''), bold: true, size: 24, color: NAVY })],
+      spacing: { before: 400, after: 80 },
+      border: { bottom: { color: GOLD, size: 6, space: 4, style: BorderStyle.SINGLE } },
+    }));
+    if (section.fields) {
+      section.fields.forEach(field => {
+        if (!field || !field.label) return;
+        children.push(new Paragraph({
+          children: [new TextRun({ text: field.label + ': ', bold: true, size: 20 }), new TextRun({ text: String(field.value || ''), size: 20 })],
+          spacing: { before: 60, after: 60 },
+        }));
+      });
+    }
+    if (section.paragraphs) {
+      section.paragraphs.forEach(para => {
+        if (!para || !String(para).trim()) return;
+        children.push(new Paragraph({
+          children: [new TextRun({ text: String(para), size: 20 })],
+          spacing: { before: 120, after: 120 },
+        }));
+      });
+    }
+    if (section.signature_block) {
+      ['', 'Client Signature: _________________________', 'Client Name (print): _________________________', 'Date: _________________________', '', 'Adviser Signature: _________________________', 'Adviser Name (print): _________________________', 'Date: _________________________'].forEach(line => {
+        children.push(new Paragraph({ children: [new TextRun({ text: line, size: 20 })], spacing: { before: 160 } }));
+      });
+    }
+  });
+
+  return new Document({ sections: [{ properties: {}, children }] });
+}
+
+module.exports = { sendWelcomeEmail, sendRoAEmail, sendRoAToClient, parseRoAContent, buildWordDoc, buildWordDocFromJson };
