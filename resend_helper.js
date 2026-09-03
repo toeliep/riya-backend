@@ -44,7 +44,7 @@ function parseRoAContent(rawText) {
   const dedupedParts = [];
   const relevantParts = firstSectionIdx >= 0 ? parts.slice(firstSectionIdx) : parts;
   for (const part of relevantParts) {
-    const sectionMatch = part.match(/^\s*(\d+)\.\s+/m);
+  const sectionMatch = part.match(/^\s*([1-8])\.\s+/m);  
     if (sectionMatch) {
       const sectionNum = sectionMatch[1];
       if (!seenSections.has(sectionNum)) { seenSections.add(sectionNum); dedupedParts.push(part); }
