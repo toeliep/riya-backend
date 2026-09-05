@@ -355,66 +355,65 @@ function buildWordDocFromJson(roaJson, clientName, brokerName, brokerToken, advi
   const GOLD = '#C9A84C';
   const children = [];
 
-  // Broker header
   children.push(new Paragraph({
-    children: [new TextRun({ text: brokerName || 'Libra Insurance Brokers (Pty) Ltd', size: 28, bold: true, color: NAVY })],
-    spacing: { before: 200, after: 60 },
+    children: [new TextRun({ text: brokerName || '', size: 26, bold: true, color: NAVY })],
+    spacing: { before: 0, after: 40 },
   }));
   children.push(new Paragraph({
-    children: [new TextRun({ text: 'FSP 9131  |  FAIS Act 37 of 2002  |  POPIA Act 4 of 2013', size: 18, color: '666666' })],
-    spacing: { after: 200 },
+    children: [new TextRun({ text: 'FSP 9131  |  FAIS Act 37 of 2002  |  POPIA Act 4 of 2013', size: 18, color: '888888' })],
+    spacing: { before: 0, after: 160 },
   }));
   children.push(new Paragraph({
-    border: { bottom: { color: NAVY, size: 6, space: 4, style: BorderStyle.SINGLE } },
-    spacing: { after: 200 },
-  }));
-
-  // RoA title
-  children.push(new Paragraph({
-    children: [new TextRun({ text: 'RECORD OF ADVICE', size: 40, bold: true, color: NAVY })],
+    children: [new TextRun({ text: 'RECORD OF ADVICE', size: 36, bold: true, color: NAVY })],
     alignment: AlignmentType.CENTER,
-    spacing: { before: 200, after: 100 },
+    spacing: { before: 160, after: 80 },
   }));
   children.push(new Paragraph({
-    children: [new TextRun({ text: (triggerLabel || 'Record of Advice') + '  |  ' + clientName + '  |  ' + (adviceDate || new Date().toLocaleDateString('en-ZA')), size: 20, color: GOLD })],
+    children: [new TextRun({ text: (triggerLabel || 'Record of Advice') + '  |  ' + (clientName || '') + '  |  ' + (adviceDate || new Date().toLocaleDateString('en-ZA')), size: 18, color: GOLD })],
     alignment: AlignmentType.CENTER,
-    spacing: { after: 400 },
-  }));
-  children.push(new Paragraph({
-    border: { bottom: { color: NAVY, size: 6, space: 4, style: BorderStyle.SINGLE } },
-    spacing: { after: 300 },
+    spacing: { before: 0, after: 240 },
   }));
 
   const sectionKeys = ['section1','section2','section3','section4','section5','section6','section7','section8'];
   sectionKeys.forEach((key, idx) => {
     const section = roaJson[key];
     if (!section) return;
+
     children.push(new Paragraph({
-      children: [new TextRun({ text: (idx + 1) + '. ' + (section.title || ''), bold: true, size: 24, color: NAVY })],
-                spacing: { before: 80, after: 80 },
-      border: { bottom: { color: GOLD, size: 6, space: 4, style: BorderStyle.SINGLE } },
+      children: [new TextRun({ text: (idx + 1) + '. ' + (section.title || '').toUpperCase(), bold: true, size: 22, color: NAVY })],
+      spacing: { before: 280, after: 80 },
+      border: { bottom: { color: GOLD, size: 4, space: 4, style: BorderStyle.SINGLE } },
     }));
+
     if (section.fields) {
       section.fields.forEach(field => {
         if (!field || !field.label) return;
         children.push(new Paragraph({
-          children: [new TextRun({ text: field.label + ': ', bold: true, size: 20 }), new TextRun({ text: String(field.value || ''), size: 20 })],
-          spacing: { before: 60, after: 60 },
+          children: [
+            new TextRun({ text: field.label + ': ', bold: true, size: 20 }),
+            new TextRun({ text: String(field.value || ''), size: 20 }),
+          ],
+          spacing: { before: 0, after: 40 },
         }));
       });
     }
+
     if (section.paragraphs) {
       section.paragraphs.forEach(para => {
         if (!para || !String(para).trim()) return;
         children.push(new Paragraph({
           children: [new TextRun({ text: String(para), size: 20 })],
-          spacing: { before: 120, after: 120 },
+          spacing: { before: 80, after: 80 },
         }));
       });
     }
+
     if (section.signature_block) {
       ['', 'Client Signature: _________________________', 'Client Name (print): _________________________', 'Date: _________________________', '', 'Adviser Signature: _________________________', 'Adviser Name (print): _________________________', 'Date: _________________________'].forEach(line => {
-        children.push(new Paragraph({ children: [new TextRun({ text: line, size: 20 })], spacing: { before: 160 } }));
+        children.push(new Paragraph({
+          children: [new TextRun({ text: line, size: 20 })],
+          spacing: { before: 120, after: 0 },
+        }));
       });
     }
   });
